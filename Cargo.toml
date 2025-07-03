@@ -1,8 +1,19 @@
 [package]
-name = "chapter-1"
+name = "z2p"
 version = "0.1.0"
+authors = ["Darshan Kumawat <kumawatdarshan.1304@gmail.com>"]
 edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "z2p"
 
 [dependencies]
 axum = "0.8.4"
 tokio = { version = "1.46.0", features = ["full"] }
+
+[dev-dependencies]
+reqwest = "0.12.22"
