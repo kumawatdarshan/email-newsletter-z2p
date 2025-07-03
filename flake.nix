@@ -40,11 +40,12 @@
           rust-bin.stable.latest.rust-analyzer
           rust-bin.stable.latest.rustfmt
         ];
-
+        LD_LIBRARY_PATH = nixpkgs.lib.makeLibraryPath [ pkgs.openssl ];
         shellHook = ''
-          export RUST_BACKTRACE="1"
+          # export RUST_BACKTRACE="1"
           export RUSTFLAGS="''${RUSTFLAGS:-""} ${rustFlags}" # prepend RUSTFLAGS if set from outside
         '';
       };
     };
 }
+

@@ -1,4 +1,5 @@
-use z2p::PORT;
+use tokio::net::TcpListener;
+use z2p::{listener, routes};
 
 /// Why this complicated test for something simple as health_check?
 /// This is a black box test, meaning it is decoupled(*mostly*) from our codebase.
@@ -10,12 +11,19 @@ use z2p::PORT;
 /// 1. Is there any content recieved? (There should not be any)
 #[tokio::test]
 async fn test_health_check() {
-    spawn_app().await.expect("Failed to spawn app");
+    // Arrange
+
+    let host = "127.0.0.1";
+    let listener = listener(0).await;
+    let port = listener.local_addr().unwrap().port();
+    let addr = format!("http://{host}:{port}");
+
+    spawn_app(listener).await.expect("Failed to spawn app");
+    dbg!(format!("{addr}/health_check"));
 
     let client = reqwest::Client::new();
-
     let response = client
-        .get(format!("localhost:{PORT}/health_check"))
+        .get(format!("{addr}/health_check"))
         .send()
         .await
         .expect("Failed to send reqest");
@@ -24,6 +32,14 @@ async fn test_health_check() {
     assert_eq!(Some(0), response.content_length()) // to validate there was no nothing present
 }
 
-async fn spawn_app() -> Result<(), std::io::Error>{
-    todo!()
+async fn spawn_app(listener: TcpListener) -> std::io::Result<()> {
+    let app = routes();
+
+    tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("Failed to bind address")
+    });
+
+    Ok(())
 }
