@@ -1,5 +1,4 @@
 use z2p::{listener, routes};
-
 pub const PORT: u16 = 3000;
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
