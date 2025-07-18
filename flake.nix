@@ -3,8 +3,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
+    fenix = {
+      url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     crane = {
@@ -15,18 +15,23 @@
   outputs = {
     self,
     nixpkgs,
-    rust-overlay,
+    fenix,
     flake-utils,
     crane,
   }:
     flake-utils.lib.eachDefaultSystem (system: let
-      overlays = [(import rust-overlay)];
+      overlays = [fenix.overlays.default];
       pkgs = import nixpkgs {
         inherit system overlays;
       };
-      rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-        extensions = ["rust-src" "clippy" "rust-analyzer" "rustfmt"];
-      };
+      rustToolchain = pkgs.fenix.stable.withComponents [
+        "cargo"
+        "clippy"
+        "rust-src"
+        "rustc"
+        "rustfmt"
+        "rust-analyzer"
+      ];
 
       src = craneLib.cleanCargoSource ./.;
       craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
@@ -70,7 +75,7 @@
         ];
         shellHook = ''
           export RUST_BACKTRACE="1"
-          echo "use cargo build for local dev.\
+          echo "use cargo build for local dev.
           nix build for distribution.
           "
         '';
