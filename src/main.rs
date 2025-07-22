@@ -1,14 +1,25 @@
+use sqlx::PgPool;
 use tokio::net::TcpListener;
-use z2p::{configuration::get_configuration, routes::router, startup::listener};
+use z2p::{
+    configuration::{AppState, get_configuration},
+    routes::get_router,
+};
 
 #[tokio::main]
-async fn main() -> Result<(), std::io::Error> {
-    let config = get_configuration().expect("Failed to read Configuration");
+async fn main() -> std::io::Result<()> {
+    let settings = get_configuration().expect("Failed to read Configuration");
+    let connection_url = settings.database.connection_string();
 
-    let listener = listener(config.application_port).await;
-    let app = router();
+    let pool = PgPool::connect(&connection_url)
+        .await
+        .expect("Failed to connect to Postgres");
 
-    axum::serve(listener, app).await.unwrap();
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", settings.application_port)).await?;
 
-    Ok(())
+    let app_state = AppState {
+        db_pool: pool.clone(),
+    };
+    let router = get_router(app_state.into());
+
+    axum::serve(listener, router).await
 }

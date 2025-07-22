@@ -1,5 +1,6 @@
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
+use sqlx::PgPool;
 
 pub type Port = u16;
 
@@ -25,6 +26,13 @@ impl DatabaseSettings {
             self.username, self.password, self.host, self.port, self.db_name
         )
     }
+
+    pub fn connection_string_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            self.username, self.password, self.host, self.port
+        )
+    }
 }
 
 pub fn get_configuration() -> Result<Settings, ConfigError> {
@@ -33,4 +41,9 @@ pub fn get_configuration() -> Result<Settings, ConfigError> {
         .build()?;
 
     settings.try_deserialize::<Settings>()
+}
+
+/// State needed for various services like psql, redis, etc
+pub struct AppState {
+    pub db_pool: PgPool,
 }

@@ -1,6 +1,5 @@
 use axum::http::StatusCode;
-use sqlx::{Connection, PgConnection};
-use z2p::{configuration::get_configuration, routes::router, startup::listener};
+use z2p::startup::spawn_app_testing;
 
 /// # Why this complicated test for something simple as health_check?
 /// This is a **black box test**, meaning it is decoupled(*mostly*) from our codebase.
@@ -13,14 +12,15 @@ use z2p::{configuration::get_configuration, routes::router, startup::listener};
 /// ---
 /// ### Although I am honestly not entirely convinced...
 /// If i even need this, I am canonizing it as the author introducing me to integration testing and that i don't actually need this in rust world. could be wrong.
+/// Update: it was totally worth it. I now know the struggles of integration testing and how to get around them.
 #[tokio::test]
 async fn test_health_check() {
     // Arrange
-    let addr = spawn_app().await.expect("Failed to spawn app");
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
     let client = reqwest::Client::new();
 
     let _response = client
-        .get(format!("{addr}/health_check"))
+        .get(format!("{}/health_check", app.addr))
         .send()
         .await
         .expect("Failed to send reqest");
@@ -32,19 +32,14 @@ async fn test_health_check() {
 #[tokio::test]
 async fn test_subscribe_valid() {
     // Arrange
-    let addr = spawn_app().await.expect("Failed to spawn app");
-    let config = get_configuration().expect("Failed to read config");
-    let connection_string = config.database.connection_string();
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
 
     let client = reqwest::Client::new();
-    let connection = PgConnection::connect(&connection_string)
-        .await
-        .expect("Faield to connect to postgres server");
 
     // Act
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
-        .post(format!("{addr}/subscribe"))
+        .post(format!("{}/subscribe", &app.addr))
         .header("Content-type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -52,13 +47,22 @@ async fn test_subscribe_valid() {
         .expect("Failed to execute request.");
 
     // Assert
-    assert_eq!(StatusCode::OK, response.status())
+    assert_eq!(StatusCode::CREATED, response.status());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
+        .fetch_one(&app.db_pool)
+        .await
+        .expect("Faield to fetch saved subscriptions.");
+
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 }
 
 // this is failing because we haven't implemented anything for /subscribe
 #[tokio::test]
 async fn test_subscribe_invalid() {
-    let addr = spawn_app().await.expect("Failed to spawn app");
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let addr = app.addr;
     let client = reqwest::Client::new();
 
     let test_cases = [
@@ -86,20 +90,4 @@ async fn test_subscribe_invalid() {
             )
         )
     }
-}
-
-async fn spawn_app() -> std::io::Result<String> {
-    let app = router();
-    let host = "127.0.0.1";
-    let listener = listener(0).await;
-    let port = listener.local_addr().unwrap().port();
-    let addr = format!("http://{host}:{port}");
-
-    tokio::spawn(async move {
-        axum::serve(listener, app)
-            .await
-            .expect("Failed to bind address")
-    });
-
-    Ok(addr)
 }

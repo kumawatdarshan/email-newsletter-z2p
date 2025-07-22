@@ -8,12 +8,49 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: newsletter
+        ports:
+          - 5432:5432
+
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test
+      - name: Install sqlx-cli
+        run:
+          cargo install sqlx-cli
+          --version=${{ env.SQLX_VERSION }}
+          --features ${{ env.SQLX_FEATURES }}
+          --no-default-features
+          --locked
+
+      - name: Create app user in Postgres
+        run: |
+          sudo apt-get install postgresql-client
+
+          # Create the application user
+          CREATE_QUERY="CREATE USER ${APP_USER} WITH PASSWORD '${APP_USER_PWD}';"
+          PGPASSWORD="postgres" psql -U "postgres" -h "localhost" -c "${CREATE_QUERY}"
+
+          # Grant create db privileges to the app user
+          GRANT_QUERY="ALTER USER ${APP_USER} CREATEDB;"
+          PGPASSWORD="postgres" psql -U "postgres" -h "localhost" -c "${GRANT_QUERY}"
+
+      - name: Migrate Database
+        run: |
+          DATABASE_URL=postgres://${APP_USER}:${APP_USER_PWD}@localhost:${DB_PORT}/${APP_DB_NAME}
+          export DATABASE_URL
+          sqlx database create
+          sqlx migrate run
+          
 
   fmt:
     name: Rustfmt
@@ -29,6 +66,8 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -38,15 +77,24 @@ jobs:
       - name: Linting
         run: cargo clippy -- -D warnings
 
-  coverage:
-    name: Code coverage
-    runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin
-      options: --security-opt seccomp=unconfined
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Generate code coverage
-        run: |
-          cargo tarpaulin --verbose --workspace
+  # coverage:
+  #   name: Code coverage
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: postgres:14
+  #       env:
+  #         POSTGRES_USER: postgres
+  #         POSTGRES_PASSWORD: postgres
+  #         POSTGRES_DB: postgres
+  #       ports:
+  #         - 5432:5432
+  #   container:
+  #     image: xd009642/tarpaulin
+  #     options: --security-opt seccomp=unconfined
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Generate code coverage
+  #       run: |
+  #         cargo tarpaulin --verbose --workspace
