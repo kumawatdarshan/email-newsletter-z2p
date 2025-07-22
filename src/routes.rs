@@ -6,10 +6,10 @@ use axum::{
     routing::{get, post},
 };
 
-use health::health_check;
-use subscribe::subscribe;
+pub use health::*;
+pub use subscribe::*;
 
-pub fn routes() -> Router {
+pub fn router() -> Router {
     Router::new()
         .route("/health", get(health_check))
         .route("/subscribe", post(subscribe))

@@ -1,6 +1,7 @@
 use axum::{Form, http::StatusCode};
+use serde::Deserialize;
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct FormData {
     name: String,
     email: String,

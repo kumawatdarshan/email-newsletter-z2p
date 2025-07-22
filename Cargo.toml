@@ -13,9 +13,22 @@ name = "z2p"
 
 [dependencies]
 axum = "0.8.4"
+config = "0.15.13"
 serde = { version = "1.0.219", features = ["derive"] }
-# hyper = { version = "1.6.0", features = ["full"] }
 tokio = { version = "1.46.0", features = ["full"] }
+tower = { version = "0.5.2", features = ["full"] }
+
+[dependencies.sqlx]
+version = "0.8.6"
+default-features = false
+features = [
+"runtime-tokio-rustls",
+"macros",
+"postgres",
+"uuid",
+"chrono",
+"migrate"
+]
 
 [dev-dependencies]
 reqwest = "0.12.22"

@@ -1,14 +1,18 @@
 use axum::http::StatusCode;
-use z2p::{listener, routes::routes};
+use sqlx::{Connection, PgConnection};
+use z2p::{configuration::get_configuration, routes::router, startup::listener};
 
-/// Why this complicated test for something simple as health_check?
-/// This is a black box test, meaning it is decoupled(*mostly*) from our codebase.
+/// # Why this complicated test for something simple as health_check?
+/// This is a **black box test**, meaning it is decoupled(*mostly*) from our codebase.
 /// Decoupled as in, it is meant to behave like how consumers of this API would use it.
 /// thus it makes several checks:
-/// 1. Are we firing the correct endpoint? (/health_check)
-/// 1. Are we firing the correct request? (GET)
-/// 1. Is it a successful response? (200)
-/// 1. Is there any content recieved? (There should not be any)
+/// - Are we firing the correct endpoint? (/health_check)
+/// - Are we firing the correct request? (GET)
+/// - Is it a successful response? (200)
+/// - Is there any content recieved? (There should not be any)
+/// ---
+/// ### Although I am honestly not entirely convinced...
+/// If i even need this, I am canonizing it as the author introducing me to integration testing and that i don't actually need this in rust world. could be wrong.
 #[tokio::test]
 async fn test_health_check() {
     // Arrange
@@ -27,9 +31,17 @@ async fn test_health_check() {
 
 #[tokio::test]
 async fn test_subscribe_valid() {
+    // Arrange
     let addr = spawn_app().await.expect("Failed to spawn app");
-    let client = reqwest::Client::new();
+    let config = get_configuration().expect("Failed to read config");
+    let connection_string = config.database.connection_string();
 
+    let client = reqwest::Client::new();
+    let connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Faield to connect to postgres server");
+
+    // Act
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
         .post(format!("{addr}/subscribe"))
@@ -39,6 +51,7 @@ async fn test_subscribe_valid() {
         .await
         .expect("Failed to execute request.");
 
+    // Assert
     assert_eq!(StatusCode::OK, response.status())
 }
 
@@ -64,15 +77,19 @@ async fn test_subscribe_invalid() {
             .expect("Failed to execute request.");
 
         assert_eq!(
-            StatusCode::BAD_REQUEST,
+            StatusCode::UNPROCESSABLE_ENTITY,
             response.status(),
-            "Api did not fail with 400.\n{error}"
+            "{}",
+            format_args!(
+                "Api should fail with {} when missing data.\n{error}",
+                StatusCode::UNPROCESSABLE_ENTITY
+            )
         )
     }
 }
 
 async fn spawn_app() -> std::io::Result<String> {
-    let app = routes();
+    let app = router();
     let host = "127.0.0.1";
     let listener = listener(0).await;
     let port = listener.local_addr().unwrap().port();
