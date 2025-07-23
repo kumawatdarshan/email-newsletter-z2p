@@ -1,6 +1,7 @@
 use crate::{
     configuration::{AppState, DatabaseSettings, get_configuration},
     routes::get_router,
+    telemetry::{get_subscriber, init_subscriber},
 };
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::io::Result;
@@ -15,16 +16,19 @@ pub struct TestApp {
 }
 
 pub async fn configure_database(settings: DatabaseSettings) -> PgPool {
-    let mut connection = PgConnection::connect(&settings.connection_string_without_db())
+    // postgres://postgres:postgres@127.0.0.1:5432
+
+    let mut connection = PgConnection::connect_with(&settings.without_db())
         .await
         .expect("Failed to connect to Postgres.");
+    // i am getting a panick here, saying my db doesn't exist.
 
     connection
         .execute(format!(r#"CREATE DATABASE "{}""#, settings.db_name).as_str())
         .await
         .expect("Failed to create database.");
 
-    let connection_pool = PgPool::connect(&settings.connection_string())
+    let connection_pool = PgPool::connect_with(settings.with_db())
         .await
         .expect("Failed to connect to Postgres.");
 
@@ -37,8 +41,14 @@ pub async fn configure_database(settings: DatabaseSettings) -> PgPool {
 }
 
 pub async fn spawn_app_testing() -> Result<TestApp> {
+    let subscriber = get_subscriber("z2p".into(), "debug".into(), std::io::stdout)?;
+    init_subscriber(subscriber)?;
+
     let mut settings = get_configuration().expect("Failed to read Configuration");
     settings.database.db_name = Uuid::new_v4().to_string();
+
+    dbg!("{}", &settings.database);
+
     let connection_pool = configure_database(settings.database).await;
 
     let listener = TcpListener::bind("127.0.0.1:0").await?;
@@ -53,7 +63,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         db_pool: connection_pool,
     };
 
-    let router = get_router(app_state.into());
+    let router = get_router(app_state);
 
     tokio::spawn(async move {
         axum::serve(listener, router)

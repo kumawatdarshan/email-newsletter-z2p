@@ -17,9 +17,17 @@ config = "0.15.13"
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.46.0", features = ["full"] }
 tower = { version = "0.5.2", features = ["full"] }
+tower-http = { version = "0.6.6", features = ["trace", "request-id", "util"] }
+
+# Tracing 
+tracing = { version = "0.1.41", features = ["log"] }
+tracing-subscriber = { version = "0.3.19", features = ["registry", "env-filter"] }
+tracing-bunyan-formatter = "0.3.10"
+tracing-log = "0.2.0"
+
 uuid = { version = "1.17.0", features = ["v4"] }
 chrono = { version = "0.4.41", default-features = false, features = ["clock"] }
-
+secrecy = { version = "0.10.3", features = ["serde"] }
 [dependencies.sqlx]
 version = "0.8.6"
 default-features = false

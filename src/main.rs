@@ -3,14 +3,17 @@ use tokio::net::TcpListener;
 use z2p::{
     configuration::{AppState, get_configuration},
     routes::get_router,
+    telemetry::{get_subscriber, init_subscriber},
 };
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let settings = get_configuration().expect("Failed to read Configuration");
-    let connection_url = settings.database.connection_string();
+    let subscriber = get_subscriber("z2p".into(), "debug".into(), std::io::stdout)?;
+    init_subscriber(subscriber)?;
 
-    let pool = PgPool::connect(&connection_url)
+    let settings = get_configuration().expect("Failed to read Configuration");
+
+    let pool = PgPool::connect_with(settings.database.with_db())
         .await
         .expect("Failed to connect to Postgres");
 
@@ -19,7 +22,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState {
         db_pool: pool.clone(),
     };
-    let router = get_router(app_state.into());
+    let router = get_router(app_state);
 
     axum::serve(listener, router).await
 }

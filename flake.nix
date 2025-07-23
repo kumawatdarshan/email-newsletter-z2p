@@ -103,6 +103,7 @@
         ];
         shellHook = ''
           export DATABASE_URL=postgres://postgres:@localhost:5432/newsletter
+          export SQLX_OFFLINE=true
         '';
       };
     });

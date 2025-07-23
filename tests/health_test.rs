@@ -49,7 +49,7 @@ async fn test_subscribe_valid() {
     // Assert
     assert_eq!(StatusCode::CREATED, response.status());
 
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
+    let saved = sqlx::query!(r#"SELECT email, name FROM subscriptions"#)
         .fetch_one(&app.db_pool)
         .await
         .expect("Faield to fetch saved subscriptions.");
