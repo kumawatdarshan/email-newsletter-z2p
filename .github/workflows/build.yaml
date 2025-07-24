@@ -47,10 +47,6 @@ jobs:
       - name: Lint Code
         run: nix develop --command cargo clippy -- -D warnings
 
-      - name: Parse config and export env vars
-        run: |
-          nix develop --command config-to-env >> $GITHUB_ENV
-
       - name: Run tests
         run: nix develop --command cargo test
 
