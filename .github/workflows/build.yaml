@@ -37,6 +37,7 @@ jobs:
 
       - name: Start Postgres Instance
         run: |
+          rm -rf ./data
           nix develop --command process-compose -t=false
 
       - name: Migrate Database

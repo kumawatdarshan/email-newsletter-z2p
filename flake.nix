@@ -60,12 +60,12 @@
           DB_NAME=$(yq '.database.db_name' "$CONFIG_FILE")
 
           cat <<-EOF
-          export APP_PORT=$APP_PORT
-          export DB_HOST=$DB_HOST
-          export DB_PORT=$DB_PORT
-          export USER=$USER
-          export DB_USER_PWD=$DB_USER_PWD
-          export DB_NAME=$DB_NAME
+          APP_PORT=$APP_PORT
+          DB_HOST=$DB_HOST
+          DB_PORT=$DB_PORT
+          USER=$USER
+          DB_USER_PWD=$DB_USER_PWD
+          DB_NAME=$DB_NAME
           EOF
         '';
       };
