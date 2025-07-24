@@ -7,13 +7,13 @@ use sqlx::{PgPool, postgres::PgConnectOptions};
 pub type Port = u16;
 
 #[derive(Deserialize, Debug)]
-pub struct Settings {
-    pub database: DatabaseSettings,
+pub struct Configuration {
+    pub database: DatabaseConfiguration,
     pub application_port: Port,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct DatabaseSettings {
+pub struct DatabaseConfiguration {
     pub username: String,
     pub password: SecretString,
     pub host: String,
@@ -21,7 +21,7 @@ pub struct DatabaseSettings {
     pub db_name: String,
 }
 
-impl DatabaseSettings {
+impl DatabaseConfiguration {
     pub fn without_db(&self) -> PgConnectOptions {
         PgConnectOptions::new()
             .host(&self.host)
@@ -35,12 +35,12 @@ impl DatabaseSettings {
     }
 }
 
-pub fn get_configuration() -> Result<Settings, ConfigError> {
+pub fn get_configuration() -> Result<Configuration, ConfigError> {
     let settings = Config::builder()
         .add_source(File::new("configuration.yaml", config::FileFormat::Yaml))
         .build()?;
 
-    settings.try_deserialize::<Settings>()
+    settings.try_deserialize::<Configuration>()
 }
 
 /// State needed for various services like psql, redis, etc

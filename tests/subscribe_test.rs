@@ -29,7 +29,6 @@ async fn test_subscribe_valid() {
     assert_eq!(saved.name, "le guin");
 }
 
-// this is failing because we haven't implemented anything for /subscribe
 #[tokio::test]
 async fn test_subscribe_invalid() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");

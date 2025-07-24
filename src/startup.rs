@@ -1,5 +1,5 @@
 use crate::{
-    configuration::{AppState, DatabaseSettings, get_configuration},
+    configuration::{AppState, DatabaseConfiguration, get_configuration},
     routes::get_router,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -15,13 +15,11 @@ pub struct TestApp {
     pub db_pool: PgPool,
 }
 
-pub async fn configure_database(settings: DatabaseSettings) -> PgPool {
-    // postgres://postgres:postgres@127.0.0.1:5432
-
+/// Creating a uuid named db through `PgConnection` and then doing the migrations through `PgPool`
+pub async fn configure_database(settings: DatabaseConfiguration) -> PgPool {
     let mut connection = PgConnection::connect_with(&settings.without_db())
         .await
         .expect("Failed to connect to Postgres.");
-    // i am getting a panick here, saying my db doesn't exist.
 
     connection
         .execute(format!(r#"CREATE DATABASE "{}""#, settings.db_name).as_str())
@@ -46,8 +44,6 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
 
     let mut settings = get_configuration().expect("Failed to read Configuration");
     settings.database.db_name = Uuid::new_v4().to_string();
-
-    dbg!("{}", &settings.database);
 
     let connection_pool = configure_database(settings.database).await;
 
