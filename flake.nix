@@ -22,14 +22,60 @@
     services-flake,
     process-compose-flake,
     crane,
-  }:
+  }: let
+    meta = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
+    inherit (meta) name version;
+    overlays = [fenix.overlays.default];
+
+    pcs = pkgs: import process-compose-flake.lib {inherit pkgs;};
+
+    postgres-service = pkgs:
+      (pcs pkgs).evalModules {
+        modules = [
+          services-flake.processComposeModules.default
+          {
+            services.postgres."pg_master" = {
+              enable = true;
+              superuser = "postgres";
+            };
+          }
+        ];
+      };
+
+    ci-config-to-env = pkgs:
+      pkgs.writeShellApplication {
+        name = "config-to-env";
+        runtimeInputs = [pkgs.yq-go];
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          CONFIG_FILE="./configuration.yaml"
+
+          APP_PORT=$(yq '.application_port' "$CONFIG_FILE")
+          DB_HOST=$(yq '.database.host' "$CONFIG_FILE")
+          DB_PORT=$(yq '.database.port' "$CONFIG_FILE")
+          USER=$(yq '.database.username' "$CONFIG_FILE")
+          DB_USER_PWD=$(yq '.database.password' "$CONFIG_FILE")
+          DB_NAME=$(yq '.database.db_name' "$CONFIG_FILE")
+
+          cat <<-EOF
+          export APP_PORT=$APP_PORT
+          export DB_HOST=$DB_HOST
+          export DB_PORT=$DB_PORT
+          export USER=$USER
+          export DB_USER_PWD=$DB_USER_PWD
+          export DB_NAME=$DB_NAME
+          EOF
+        '';
+      };
+  in
     flake-utils.lib.eachDefaultSystem (system: let
-      overlays = [fenix.overlays.default];
       pkgs = import nixpkgs {
         inherit system overlays;
       };
-
-      pcs = import process-compose-flake.lib {inherit pkgs;};
+      postgres = postgres-service pkgs;
+      config-to-env = ci-config-to-env pkgs;
       rustToolchain = pkgs.fenix.stable.withComponents [
         "cargo"
         "clippy"
@@ -48,7 +94,9 @@
       nativeBuildInputs = with pkgs;
         [
           pkg-config
+          config-to-env
           rustToolchain
+          sqlx-cli
         ]
         ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
           mold
@@ -59,26 +107,12 @@
       };
 
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-    in rec {
-      inherit pcs;
-      postgres-service = pcs.evalModules {
-        modules = [
-          services-flake.processComposeModules.default
-          {
-            services.postgres."pg_master" = {
-              enable = true;
-              superuser = "postgres";
-            };
-          }
-        ];
-      };
-
+    in {
       packages = {
-        # not really needed tbh. i think this is just wrapper around process-compose
-        postgres-service-runner = postgres-service.config.outputs.package;
-
         default = craneLib.buildPackage (commonArgs
           // {
+            inherit version;
+            pname = name;
             inherit cargoArtifacts;
             RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
           });
@@ -87,22 +121,22 @@
       devShells.default = pkgs.mkShell {
         inherit nativeBuildInputs buildInputs;
         inputsFrom = [
-          postgres-service.config.services.outputs.devShell
+          postgres.config.services.outputs.devShell
         ];
 
         packages = with pkgs; [
-          postgres-service.config.outputs.package
+          postgres.config.outputs.package
           just
           curlie
           cargo-watch
           cargo-expand
-          sqlx-cli
         ];
         LD_LIBRARY_PATH = nixpkgs.lib.makeLibraryPath [
           pkgs.openssl
         ];
         shellHook = ''
-          export DATABASE_URL=postgres://postgres:@localhost:5432/newsletter
+          eval "$(config-to-env)"
+          export DATABASE_URL="postgres://$USER:$DB_USER_PWD@$DB_HOST:$DB_PORT/$DB_NAME"
           export SQLX_OFFLINE=true
         '';
       };
