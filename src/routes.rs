@@ -1,35 +1,20 @@
 pub mod health;
 pub mod subscribe;
-
 use crate::configuration::AppState;
+use crate::telemetry::RequestIdMakeSpan;
 use axum::{
     Router,
-    http::Request,
     routing::{get, post},
 };
 use health::*;
 use subscribe::*;
 use tower::ServiceBuilder;
-use tower_http::{
-    ServiceBuilderExt,
-    request_id::{MakeRequestId, RequestId},
-    trace::TraceLayer,
-};
-use uuid::Uuid;
-
-// Define your ID generator
-#[derive(Clone)]
-struct MyMakeRequestId;
-impl MakeRequestId for MyMakeRequestId {
-    fn make_request_id<B>(&mut self, _: &Request<B>) -> Option<RequestId> {
-        Some(RequestId::new(Uuid::new_v4().to_string().parse().unwrap()))
-    }
-}
+use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
 
 pub fn get_router(connection: AppState) -> Router {
     let middlewares = ServiceBuilder::new()
-        .set_x_request_id(MyMakeRequestId)
-        .layer(TraceLayer::new_for_http())
+        .set_x_request_id(MakeRequestUuid)
+        .layer(TraceLayer::new_for_http().make_span_with(RequestIdMakeSpan))
         .propagate_x_request_id();
 
     Router::new()

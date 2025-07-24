@@ -42,7 +42,6 @@ async fn add_subscriber(state: Arc<AppState>, form: FormData) -> Result<(), sqlx
     name = "Adding a new Subscriber",
     skip(state, form),
     fields(
-        request_id = %Uuid::new_v4(),
         subscriber_email = %form.email,
         subscriber_name = %form.name,
     )
