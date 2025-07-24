@@ -38,7 +38,7 @@ jobs:
       - name: Start Postgres Instance
         run: |
           rm -rf ./data
-          nix develop --command process-compose -t=false
+          nix develop --command process-compose 
 
       - name: Run tests
         run: nix develop --command cargo test
