@@ -1,4 +1,4 @@
-name: Rust
+name: Check and perform Tests
 on: [push, pull_request]
 
 env:
@@ -37,7 +37,7 @@ jobs:
 
       - name: Start Postgres Instance
         run: |
-          nix develop --command process-compose -D
+          nix develop --command process-compose -t=false
 
       - name: Migrate Database
         run: |
