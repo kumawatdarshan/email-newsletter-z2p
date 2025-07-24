@@ -1,30 +1,50 @@
-# Things different from original book.
-- Using Axum instead of actix-web.
-- Using nix flakes for entirety of deployment pipeline.
+# Things Different from Original Book
 
-### Side Questing
+## Tech Stack Differences
+- Using **Axum** instead of `actix-web`.
+- Using **Nix flakes** for the entirety of the deployment pipeline.
 
-~~1. Missing data ~~for content type `application/x-www-form-urlencoded`~~ results in `UNPROCESSABLE_ENTITY` and not `BAD_REQUEST`. ~~Could be the case for all types of content type, i have yet to test.~~ It is indeed the case with all types of content types.~~
-1. Okay, so, 422 is for `Validation error` and 400 is for `Deserialization error`. Wait what?
+# Side Questing
 
-+ `400 Bad Request` — **Deserialization error**
-  >- Server can't decode request into the expected type.
-  >- Common with: `Path`, `Query`
-  >- Example: invalid URL.
+## 1. Status Codes: `400 Bad Request` vs `422 Unprocessable Entity`
 
-+ `422 Unprocessable Entity` — **Validation error**
-  >- Request format (JSON/form) is valid, but incorrect data.
-  >- Common with: `Json`, `Form`
-  >- Example: missing required fields, wrong value types inside a valid JSON.
+Missing data for content type `application/x-www-form-urlencoded` results in `UNPROCESSABLE_ENTITY` and not `BAD_REQUEST`.
+~~Could be the case for all types of content types, I have yet to test. ~~ 
 
-2. UNIQUE constraint in postgres (and maybe all dbms, unchecked info) introduces B-Tree index which needs to be updated on every `INSERT`/`UPDATE`/`DELETE` query. An area of optimization if I ever run into perf issue. 
+### Clarification:
 
+- `400 Bad Request` — **Deserialization Error**
+  - Server can't decode request into the expected type.
+  - Common with: `Path`, `Query`
+  - Example: invalid URL.
 
-## Quirks
+- `422 Unprocessable Entity` — **Validation Error**
+  - Request format (`JSON`/`Form`) is valid, but contains incorrect data.
+  - Common with: `Json`, `Form`
+  - Example: missing required fields, wrong value types inside a valid JSON.
 
-### Nix Quirks
-1. Using juspay's service flake to use postgres.
-2. Using process-compose to `run` psql server.
+## 2. PostgreSQL: UNIQUE Constraint & Performance
 
-### Database Quirks
-1. must delete `data/` dir if made any changes to config like creating a role. Gave me a lot of headache
+- The `UNIQUE` constraint in PostgreSQL (and maybe all DBMS — unverified) introduces a **B-Tree index**.
+- This index must be updated on every `INSERT` / `UPDATE` / `DELETE`.
+- An area of optimization if I ever run into performance issues. Albeit rare I guess.
+
+# Quirks
+
+## Nix Quirks
+
+1. Using **Juspay’s service flake** to run PostgreSQL.
+2. Using **process-compose** to `run` the PostgreSQL server.
+
+## Database Quirks
+
+1. You must **delete the `data/` directory** if you’ve made any config changes like creating a role.  
+   Gave me a lot of headache.
+
+## Tower/Axum Quirks
+
+1. To replicate what the book does at the end of Chapter 4 — having `request_id` in the logs:
+  - You can create a closure.
+  - Or, better yet, implement the trait `tower_http::trace::MakeSpan` for a type `T`.
+  - Then pass it to `TraceLayer::make_span_with`.
+> Done in commit `9cb3376` in `/src/telemetry.rs`, struct `RequestIdMakeSpan`.
