@@ -40,12 +40,6 @@ jobs:
           rm -rf ./data
           nix develop --command process-compose -t=false
 
-      - name: Migrate Database
-        run: |
-          export DATABASE_URL=postgres://${DB_USER}:${DB_USER_PWD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-          nix develop --command sqlx database create
-          nix develop --command sqlx migrate run
-
       - name: Run tests
         run: nix develop --command cargo test
 
