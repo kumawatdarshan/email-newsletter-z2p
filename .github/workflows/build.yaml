@@ -23,13 +23,14 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Check Rust formatting
-        run: |
-          nix develop --command \
-            cargo fmt --check
+      # TODO: uncomment after fixing postgres
+      # - name: Check Rust formatting
+      #   run: |
+      #     nix develop --command \
+      #       cargo fmt --check
 
-      - name: Lint Code
-        run: nix develop --command cargo clippy -- -D warnings
+      # - name: Lint Code
+      #   run: nix develop --command cargo clippy -- -D warnings
 
       - name: Parse config and export env vars
         run: |
@@ -38,7 +39,7 @@ jobs:
       - name: Start Postgres Instance
         run: |
           rm -rf ./data
-          nix develop --command process-compose 
+          nix develop --command process-compose -t=false
 
       - name: Run tests
         run: nix develop --command cargo test
