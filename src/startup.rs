@@ -22,7 +22,7 @@ pub async fn configure_database(settings: DatabaseConfiguration) -> PgPool {
         .expect("Failed to connect to Postgres.");
 
     connection
-        .execute(format!(r#"CREATE DATABASE "{}""#, settings.db_name).as_str())
+        .execute(format!(r#"CREATE DATABASE "{}""#, settings.name).as_str())
         .await
         .expect("Failed to create database.");
 
@@ -43,7 +43,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
     init_subscriber(subscriber)?;
 
     let mut settings = get_configuration().expect("Failed to read Configuration");
-    settings.database.db_name = Uuid::new_v4().to_string();
+    settings.database.name = Uuid::new_v4().to_string();
 
     let connection_pool = configure_database(settings.database).await;
 

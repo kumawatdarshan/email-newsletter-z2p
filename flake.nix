@@ -34,6 +34,7 @@
         modules = [
           services-flake.processComposeModules.default
           {
+            cli.options.port = 8084;
             services.postgres."pg_master" = {
               enable = true;
               superuser = "postgres";
@@ -42,40 +43,14 @@
         ];
       };
 
-    ci-config-to-env = pkgs:
-      pkgs.writeShellApplication {
-        name = "config-to-env";
-        runtimeInputs = [pkgs.yq-go];
-        text = ''
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          CONFIG_FILE="./configuration.yaml"
-
-          APP_PORT=$(yq '.application_port' "$CONFIG_FILE")
-          DB_HOST=$(yq '.database.host' "$CONFIG_FILE")
-          DB_PORT=$(yq '.database.port' "$CONFIG_FILE")
-          USER=$(yq '.database.username' "$CONFIG_FILE")
-          DB_USER_PWD=$(yq '.database.password' "$CONFIG_FILE")
-          DB_NAME=$(yq '.database.db_name' "$CONFIG_FILE")
-
-          cat <<-EOF
-          APP_PORT=$APP_PORT
-          DB_HOST=$DB_HOST
-          DB_PORT=$DB_PORT
-          USER=$USER
-          DB_USER_PWD=$DB_USER_PWD
-          DB_NAME=$DB_NAME
-          EOF
-        '';
-      };
+    config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
+    db = config.database;
   in
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {
         inherit system overlays;
       };
       postgres = postgres-service pkgs;
-      config-to-env = ci-config-to-env pkgs;
       rustToolchain = pkgs.fenix.stable.withComponents [
         "cargo"
         "clippy"
@@ -85,17 +60,25 @@
         "rust-analyzer"
       ];
 
-      src = craneLib.cleanCargoSource ./.;
       craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+
+      src = pkgs.lib.fileset.toSource {
+        root = ./.;
+        fileset = pkgs.lib.fileset.unions [
+          (craneLib.fileset.commonCargoSources ./.)
+          ./migrations
+          ./configuration
+          ./.sqlx
+        ];
+      };
+
       buildInputs = with pkgs; [
         openssl
       ];
-
       nativeBuildInputs = with pkgs;
         [
+          openssl
           pkg-config
-          config-to-env
-          rustToolchain
           sqlx-cli
         ]
         ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
@@ -108,12 +91,38 @@
 
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
     in {
-      packages = {
+      packages = rec {
+        docker = let
+          bin = "${default}/bin/${name}";
+          runtimeDirs = [
+            {
+              name = "configuration";
+              path = ./configuration;
+            }
+            {
+              name = "migrations";
+              path = ./migrations;
+            }
+          ];
+          runtime = pkgs.linkFarm "config" runtimeDirs;
+        in
+          pkgs.dockerTools.buildLayeredImage {
+            inherit name;
+            tag = "v${version}";
+            contents = [
+              runtime
+            ];
+            config = {
+              Entrypoint = [bin];
+              ExposedPorts."8000/tcp" = {};
+            };
+          };
         default = craneLib.buildPackage (commonArgs
           // {
-            inherit version;
+            inherit version cargoArtifacts buildInputs nativeBuildInputs;
+            doCheck = false;
             pname = name;
-            inherit cargoArtifacts;
+            SQLX_OFFLINE = true;
             RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
           });
       };
@@ -135,8 +144,7 @@
           pkgs.openssl
         ];
         shellHook = ''
-          eval "$(config-to-env)"
-          export DATABASE_URL="postgres://$USER:$DB_USER_PWD@$DB_HOST:$DB_PORT/$DB_NAME"
+          export DATABASE_URL="postgres://${db.username}:${db.password}@${db.host}:${db.port}/${db.name}"
           export SQLX_OFFLINE=true
         '';
       };

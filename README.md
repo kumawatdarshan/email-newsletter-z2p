@@ -3,6 +3,7 @@
 ## Tech Stack Differences
 - Using **Axum** instead of `actix-web`.
 - Using **Nix flakes** for the entirety of the deployment pipeline.
+  - Also Integrating Nix into Github Actions.
 
 # Side Questing
 

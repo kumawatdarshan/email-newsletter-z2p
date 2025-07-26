@@ -6,6 +6,7 @@ use z2p::{
     telemetry::{get_subscriber, init_subscriber},
 };
 
+/// it isn't. [here is the flake and repo](https://github.com/darshanCommits/email-newsletter-z2p/blob/master/flake.nix)
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let subscriber = get_subscriber("z2p".into(), "debug".into(), std::io::stdout)?;
@@ -13,11 +14,13 @@ async fn main() -> std::io::Result<()> {
 
     let settings = get_configuration().expect("Failed to read Configuration");
 
-    let pool = PgPool::connect_with(settings.database.with_db())
-        .await
-        .expect("Failed to connect to Postgres");
+    let pool = PgPool::connect_lazy_with(settings.database.with_db());
 
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", settings.application_port)).await?;
+    let listener = TcpListener::bind(format!(
+        "{}:{}",
+        settings.application.host, settings.application.port
+    ))
+    .await?;
 
     let app_state = AppState {
         db_pool: pool.clone(),
