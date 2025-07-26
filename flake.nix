@@ -77,7 +77,6 @@
       ];
       nativeBuildInputs = with pkgs;
         [
-          openssl
           pkg-config
           sqlx-cli
         ]
@@ -117,6 +116,7 @@
               ExposedPorts."8000/tcp" = {};
             };
           };
+
         default = craneLib.buildPackage (commonArgs
           // {
             inherit version cargoArtifacts buildInputs nativeBuildInputs;

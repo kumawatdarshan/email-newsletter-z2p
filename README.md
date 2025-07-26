@@ -35,7 +35,10 @@ Missing data for content type `application/x-www-form-urlencoded` results in `UN
 ## Nix Quirks
 
 1. Using **Juspay’s service flake** to run PostgreSQL.
-2. Using **process-compose** to `run` the PostgreSQL server.
+1. Using **process-compose** to `run` the PostgreSQL server.
+1. When using `Crane` as builder, it will also run `cargo test`. This could turn problematic since we run integration test. To disable this behaviour, use `doCheck = false;`
+1. When Building docker img, you have to manually specify all runtime files. Use `pkgs.linkFarm`, otherwise it will be copied as a flat structure.
+
 
 ## Database Quirks
 
