@@ -52,3 +52,9 @@ Missing data for content type `application/x-www-form-urlencoded` results in `UN
   - Or, better yet, implement the trait `tower_http::trace::MakeSpan` for a type `T`.
   - Then pass it to `TraceLayer::make_span_with`.
 > Done in commit `9cb3376` in `/src/telemetry.rs`, struct `RequestIdMakeSpan`.
+
+
+## Notes for self.
+
+### Contribution
+1. See if i can improve sqlx error msg. I have a big gripe with it right now is that, it cannot differentiate if it needs active connection for a query or `SQLX_OFFLINE` mode would work. This gave me a lot of pain while debugging my `cargo clippy --all-targets`.

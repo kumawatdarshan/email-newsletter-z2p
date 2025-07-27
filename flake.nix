@@ -72,25 +72,55 @@
         ];
       };
 
+      # runtime deps
       buildInputs = with pkgs; [
         openssl
       ];
-      nativeBuildInputs = with pkgs;
-        [
-          pkg-config
-          sqlx-cli
-        ]
-        ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-          mold
-        ];
+      # Build deps
+      nativeBuildInputs = let
+        isLinux = pkgs.lib.optionals pkgs.stdenv.isLinux;
+      in
+        with pkgs;
+          [
+            pkg-config
+            sqlx-cli
+          ]
+          ++ isLinux [
+            mold
+          ];
+
       commonArgs = {
         inherit src buildInputs nativeBuildInputs;
+        SQLX_OFFLINE = true;
         strictDeps = true;
       };
 
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
     in {
+      checks = {
+        fmt = craneLib.cargoFmt {
+          inherit src;
+        };
+
+        clippy = let
+          clippyScope = "--lib --bins"; # we want this because tests require active db connection
+        in
+          craneLib.cargoClippy (
+            commonArgs
+            // {
+              inherit cargoArtifacts;
+              cargoClippyExtraArgs = "${clippyScope} -- --deny warnings";
+            }
+          );
+      };
       packages = rec {
+        default = craneLib.buildPackage (commonArgs
+          // {
+            inherit version cargoArtifacts buildInputs nativeBuildInputs;
+            doCheck = false;
+            pname = name;
+            RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
+          });
         docker = let
           bin = "${default}/bin/${name}";
           runtimeDirs = [
@@ -116,19 +146,10 @@
               ExposedPorts."8000/tcp" = {};
             };
           };
-
-        default = craneLib.buildPackage (commonArgs
-          // {
-            inherit version cargoArtifacts buildInputs nativeBuildInputs;
-            doCheck = false;
-            pname = name;
-            SQLX_OFFLINE = true;
-            RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
-          });
       };
 
       devShells.default = pkgs.mkShell {
-        inherit nativeBuildInputs buildInputs;
+        inherit buildInputs nativeBuildInputs;
         inputsFrom = [
           postgres.config.services.outputs.devShell
         ];
@@ -140,13 +161,9 @@
           cargo-watch
           cargo-expand
         ];
-        LD_LIBRARY_PATH = nixpkgs.lib.makeLibraryPath [
-          pkgs.openssl
-        ];
-        shellHook = ''
-          export DATABASE_URL="postgres://${db.username}:${db.password}@${db.host}:${db.port}/${db.name}"
-          export SQLX_OFFLINE=true
-        '';
+
+        DATABASE_URL = "postgres://${db.username}:${db.password}@${db.host}:${db.port}/${db.name}";
+        SQLX_OFFLINE = true;
       };
     });
 }
