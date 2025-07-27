@@ -14,43 +14,16 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    fenix,
-    flake-utils,
-    services-flake,
-    process-compose-flake,
-    crane,
-  }: let
+  outputs = inputs: let
+    inherit (inputs) self nixpkgs fenix flake-utils crane;
+    config = builtins.fromJSON (builtins.readFile "${self}/configuration/base.json");
     meta = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
-    inherit (meta) name version;
-    overlays = [fenix.overlays.default];
-
-    pcs = pkgs: import process-compose-flake.lib {inherit pkgs;};
-
-    postgres-service = pkgs:
-      (pcs pkgs).evalModules {
-        modules = [
-          services-flake.processComposeModules.default
-          {
-            cli.options.port = 8084;
-            services.postgres."pg_master" = {
-              enable = true;
-              superuser = "postgres";
-            };
-          }
-        ];
-      };
-
-    config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
-    db = config.database;
   in
     flake-utils.lib.eachDefaultSystem (system: let
+      overlays = [fenix.overlays.default];
       pkgs = import nixpkgs {
         inherit system overlays;
       };
-      postgres = postgres-service pkgs;
       rustToolchain = pkgs.fenix.stable.withComponents [
         "cargo"
         "clippy"
@@ -97,73 +70,18 @@
 
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
     in {
-      checks = {
-        fmt = craneLib.cargoFmt {
-          inherit src;
-        };
-
-        clippy = let
-          clippyScope = "--lib --bins"; # we want this because tests require active db connection
-        in
-          craneLib.cargoClippy (
-            commonArgs
-            // {
-              inherit cargoArtifacts;
-              cargoClippyExtraArgs = "${clippyScope} -- --deny warnings";
-            }
-          );
-      };
-      packages = rec {
-        default = craneLib.buildPackage (commonArgs
-          // {
-            inherit version cargoArtifacts buildInputs nativeBuildInputs;
-            doCheck = false;
-            pname = name;
-            RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
-          });
-        docker = let
-          bin = "${default}/bin/${name}";
-          runtimeDirs = [
-            {
-              name = "configuration";
-              path = ./configuration;
-            }
-            {
-              name = "migrations";
-              path = ./migrations;
-            }
-          ];
-          runtime = pkgs.linkFarm "config" runtimeDirs;
-        in
-          pkgs.dockerTools.buildLayeredImage {
-            inherit name;
-            tag = "v${version}";
-            contents = [
-              runtime
-            ];
-            config = {
-              Entrypoint = [bin];
-              ExposedPorts."8000/tcp" = {};
-            };
-          };
+      packages = import ./nix/packages.nix {
+        inherit meta pkgs craneLib commonArgs cargoArtifacts;
       };
 
-      devShells.default = pkgs.mkShell {
-        inherit buildInputs nativeBuildInputs;
-        inputsFrom = [
-          postgres.config.services.outputs.devShell
-        ];
+      checks = import ./nix/checks.nix {
+        inherit craneLib commonArgs cargoArtifacts;
+      };
 
-        packages = with pkgs; [
-          postgres.config.outputs.package
-          just
-          curlie
-          cargo-watch
-          cargo-expand
-        ];
-
-        DATABASE_URL = "postgres://${db.username}:${db.password}@${db.host}:${db.port}/${db.name}";
-        SQLX_OFFLINE = true;
+      devShells = import ./nix/devshell.nix {
+        inherit config pkgs;
+        inherit (commonArgs) buildInputs nativeBuildInputs;
+        inherit (inputs) process-compose-flake services-flake;
       };
     });
 }
