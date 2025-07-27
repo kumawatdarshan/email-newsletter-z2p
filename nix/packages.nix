@@ -21,11 +21,11 @@ in rec {
     runtimeDirs = [
       {
         name = "configuration";
-        path = ./configuration;
+        path = ../configuration;
       }
       {
         name = "migrations";
-        path = ./migrations;
+        path = ../migrations;
       }
     ];
     runtime = pkgs.linkFarm "config" runtimeDirs;

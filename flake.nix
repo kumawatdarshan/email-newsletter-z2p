@@ -16,7 +16,7 @@
 
   outputs = inputs: let
     inherit (inputs) self nixpkgs fenix flake-utils crane;
-    config = builtins.fromJSON (builtins.readFile "${self}/configuration/base.json");
+    config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
     meta = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
   in
     flake-utils.lib.eachDefaultSystem (system: let
