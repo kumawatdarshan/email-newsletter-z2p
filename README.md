@@ -5,6 +5,10 @@
 - Using **Nix flakes** for the entirety of the deployment pipeline.
   - Also Integrating Nix into Github Actions.
 
+### Minor Differences
+1. No need for serde-aux for `5.4`. Updates... ig?
+1. Not deploying it. I am... *broke*.
+
 # Side Questing
 
 ## 1. Status Codes: `400 Bad Request` vs `422 Unprocessable Entity`

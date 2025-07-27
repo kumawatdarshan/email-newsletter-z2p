@@ -39,6 +39,10 @@ in {
       cargo-expand
     ];
 
+    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+      pkgs.openssl
+    ];
+
     DATABASE_URL = "postgres://${db.username}:${db.password}@${db.host}:${db.port}/${db.name}";
     SQLX_OFFLINE = true;
   };

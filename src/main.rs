@@ -13,6 +13,7 @@ async fn main() -> std::io::Result<()> {
     init_subscriber(subscriber)?;
 
     let settings = get_configuration().expect("Failed to read Configuration");
+    dbg!(&settings);
 
     let pool = PgPool::connect_lazy_with(settings.database.with_db());
 

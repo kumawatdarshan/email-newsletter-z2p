@@ -7,6 +7,7 @@
 		"port": "5432",
 		"username": "postgres",
 		"password": "postgres",
-		"name": "newsletter"
+		"name": "newsletter",
+		"require_ssl": "false"
 	}
 }

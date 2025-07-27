@@ -2,7 +2,33 @@ use config::Config;
 use config::{ConfigError, File};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
-use sqlx::{PgPool, postgres::PgConnectOptions};
+use sqlx::postgres::PgSslMode;
+use sqlx::{ConnectOptions, PgPool, postgres::PgConnectOptions};
+
+pub fn get_configuration() -> Result<Configuration, ConfigError> {
+    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
+    let configuration_dir = base_path.join("configuration");
+
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or("local".into())
+        .try_into()
+        .expect("Faild to parse APP_ENVIRONMENT variable");
+
+    // this would set APP_{Configuration}_{Field}
+    let settings = Config::builder()
+        .add_source(File::from(configuration_dir.join("base.json")))
+        .add_source(File::from(
+            configuration_dir.join(format!("{}.json", environment.as_str())),
+        ))
+        .add_source(
+            config::Environment::with_prefix("APP")
+                .prefix_separator("_")
+                .separator("__"),
+        )
+        .build()?;
+
+    settings.try_deserialize::<Configuration>()
+}
 
 pub type Port = u16;
 
@@ -25,19 +51,28 @@ pub struct DatabaseConfiguration {
     pub host: String,
     pub port: Port,
     pub name: String,
+    pub require_ssl: bool,
 }
 
 impl DatabaseConfiguration {
     pub fn without_db(&self) -> PgConnectOptions {
+        let ssl = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            PgSslMode::Prefer
+        };
         PgConnectOptions::new()
             .host(&self.host)
             .username(&self.username)
             .password(self.password.expose_secret())
             .port(self.port)
+            .ssl_mode(ssl)
     }
 
     pub fn with_db(&self) -> PgConnectOptions {
-        self.without_db().database(&self.name)
+        self.without_db()
+            .database(&self.name)
+            .log_statements(tracing_log::log::LevelFilter::Trace)
     }
 }
 
@@ -67,25 +102,6 @@ impl TryFrom<String> for Environment {
             )),
         }
     }
-}
-
-pub fn get_configuration() -> Result<Configuration, ConfigError> {
-    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
-    let configuration_dir = base_path.join("configuration");
-
-    let environment: Environment = std::env::var("APP_ENVIRONMENT")
-        .unwrap_or("local".into())
-        .try_into()
-        .expect("Faild to parse APP_ENVIRONMENT variable");
-
-    let settings = Config::builder()
-        .add_source(File::from(configuration_dir.join("base.json")))
-        .add_source(File::from(
-            configuration_dir.join(format!("{}.json", environment.as_str())),
-        ))
-        .build()?;
-
-    settings.try_deserialize::<Configuration>()
 }
 
 /// State needed for various services like psql, redis, etc
