@@ -24,13 +24,14 @@
       pkgs = import nixpkgs {
         inherit system overlays;
       };
-      rustToolchain = pkgs.fenix.stable.withComponents [
+      rustToolchain = pkgs.fenix.minimal.withComponents [
         "cargo"
         "clippy"
         "rust-src"
         "rustc"
         "rustfmt"
         "rust-analyzer"
+        "rustc-codegen-cranelift-preview"
       ];
 
       craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;

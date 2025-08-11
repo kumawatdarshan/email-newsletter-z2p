@@ -18,7 +18,7 @@ test-subcribe:
 
 
 test:
-    cargo test
+    SQLX_OFFLINE=false cargo test
 
 migration:
     sqlx database create

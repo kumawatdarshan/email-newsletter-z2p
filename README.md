@@ -8,6 +8,7 @@
 ### Minor Differences
 1. No need for serde-aux for `5.4`. Updates... ig?
 1. Not deploying it. I am... *broke*.
+1. `validator` Crate had massive API changes, Making it easy to validate directly on the struct and thus simplifying alot of the stuff the book manually implemented.
 
 # Side Questing
 
