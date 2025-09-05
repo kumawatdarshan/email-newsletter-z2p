@@ -10,12 +10,12 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct AppBuilder {
+pub struct AppFactory {
     pub config: Configuration,
     pub test_mode: bool,
 }
 
-impl AppBuilder {
+impl AppFactory {
     pub fn new(test_mode: bool) -> std::io::Result<Self> {
         let config = get_configuration().expect("Failed to read Configuration");
 
@@ -55,17 +55,5 @@ impl AppBuilder {
             .sender()
             .expect("Invalid Sender email");
         EmailClient::new(self.config.email_client.base_url.clone(), sender_email)
-    }
-
-    pub async fn build_app_state(&mut self) -> std::io::Result<(TcpListener, AppState)> {
-        let listener = self.create_listener().await?;
-        let pool = self.create_db_pool().await;
-        let email_client = self.create_email_client();
-
-        let app_state = AppState {
-            db_pool: pool,
-            email_client,
-        };
-        Ok((listener, app_state))
     }
 }

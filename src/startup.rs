@@ -1,5 +1,5 @@
 use crate::{
-    app_state::AppBuilder,
+    app_state::AppFactory,
     configuration::{AppState, DatabaseConfiguration},
     routes::get_router,
 };
@@ -8,7 +8,7 @@ use std::io::Result;
 
 /// Only for integration tests.
 #[derive(Debug)]
-pub struct TestApp {
+pub struct TestAppState {
     pub addr: String,
     pub db_pool: PgPool,
 }
@@ -36,21 +36,20 @@ pub async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool
     connection_pool
 }
 
-pub async fn spawn_app_testing() -> Result<TestApp> {
-    let mut app_builder = AppBuilder::new(true)?.init_subscriber()?;
-    let listener = app_builder.create_listener().await?;
-    let address = listener.local_addr()?;
-    let pool = app_builder.create_db_pool().await;
-    let email_client = app_builder.create_email_client();
-
-    let test_app = TestApp {
-        addr: format!("http://{address}"),
-        db_pool: pool.clone(),
-    };
+pub async fn spawn_app_testing() -> Result<TestAppState> {
+    let mut app_factory = AppFactory::new(true)?.init_subscriber()?;
+    let listener = app_factory.create_listener().await?;
+    let db_pool = app_factory.create_db_pool().await;
+    let email_client = app_factory.create_email_client();
 
     let app_state = AppState {
-        db_pool: pool,
+        db_pool: db_pool.clone(),
         email_client,
+    };
+
+    let test_app = TestAppState {
+        addr: format!("http://{}", listener.local_addr()?),
+        db_pool,
     };
 
     let router = get_router(app_state);
