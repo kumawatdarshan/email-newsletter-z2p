@@ -1,31 +1,18 @@
-use sqlx::PgPool;
-use tokio::net::TcpListener;
-use z2p::{
-    configuration::{AppState, get_configuration},
-    routes::get_router,
-    telemetry::{get_subscriber, init_subscriber},
-};
+use z2p::{app_state::AppFactory, configuration::AppState, routes::get_router};
 
-/// it isn't. [here is the flake and repo](https://github.com/darshanCommits/email-newsletter-z2p/blob/master/flake.nix)
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let subscriber = get_subscriber("z2p".into(), "debug".into(), std::io::stdout)?;
-    init_subscriber(subscriber)?;
+    let mut app_factory = AppFactory::new(false)?.init_subscriber()?;
 
-    let settings = get_configuration().expect("Failed to read Configuration");
-    dbg!(&settings);
-
-    let pool = PgPool::connect_lazy_with(settings.database.with_db());
-
-    let listener = TcpListener::bind(format!(
-        "{}:{}",
-        settings.application.host, settings.application.port
-    ))
-    .await?;
+    let listener = app_factory.create_listener().await?;
+    let pool = app_factory.create_db_pool().await;
+    let email_client = app_factory.create_email_client();
 
     let app_state = AppState {
-        db_pool: pool.clone(),
+        db_pool: pool,
+        email_client,
     };
+
     let router = get_router(app_state);
 
     axum::serve(listener, router).await

@@ -9,6 +9,8 @@
 1. No need for serde-aux for `5.4`. Updates... ig?
 1. Not deploying it. I am... *broke*.
 1. `validator` Crate had massive API changes, Making it easy to validate directly on the struct and thus simplifying alot of the stuff the book manually implemented.
+1. API changes in `fake` crate, the constraints for g is now stricter and requires a type that implements `Rng` trait which comes from `rand` crate.
+
 
 # Side Questing
 
@@ -63,3 +65,16 @@ Missing data for content type `application/x-www-form-urlencoded` results in `UN
 
 ### Contribution
 1. See if i can improve sqlx error msg. I have a big gripe with it right now is that, it cannot differentiate if it needs active connection for a query or `SQLX_OFFLINE` mode would work. This gave me a lot of pain while debugging my `cargo clippy --all-targets`.
+
+
+```bash
+curl -X POST 'https://api.resend.com/emails' \
+ -H 'Authorization: Bearer re_xxxxxxxxx' \
+ -H 'Content-Type: application/json' \
+ -d $'{
+  "from": "Acme <onboarding@resend.dev>",
+  "to": ["delivered@resend.dev"],
+  "subject": "hello world",
+  "html": "<p>it works!</p>"
+}'
+```
