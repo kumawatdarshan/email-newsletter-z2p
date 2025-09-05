@@ -9,5 +9,9 @@
 		"password": "postgres",
 		"name": "newsletter",
 		"require_ssl": "false"
+	},
+	"email_client" : {
+		"base_url" : "https://api.resend.com/emails",
+		"sender_email" : "kumawatdarshan.1304@gmail.com"
 	}
 }

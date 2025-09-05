@@ -31,7 +31,6 @@
         "rustc"
         "rustfmt"
         "rust-analyzer"
-        "rustc-codegen-cranelift-preview"
       ];
 
       craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;

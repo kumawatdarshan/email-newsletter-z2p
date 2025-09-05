@@ -5,6 +5,9 @@ use serde::Deserialize;
 use sqlx::postgres::PgSslMode;
 use sqlx::{ConnectOptions, PgPool, postgres::PgConnectOptions};
 
+use crate::domain::SubscriberEmail;
+use crate::email_client::EmailClient;
+
 pub fn get_configuration() -> Result<Configuration, ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_dir = base_path.join("configuration");
@@ -36,6 +39,7 @@ pub type Port = u16;
 pub struct Configuration {
     pub database: DatabaseConfiguration,
     pub application: ApplicationConfiguration,
+    pub email_client: EmailClientConfiguration,
 }
 
 #[derive(Deserialize, Debug)]
@@ -52,6 +56,18 @@ pub struct DatabaseConfiguration {
     pub port: Port,
     pub name: String,
     pub require_ssl: bool,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct EmailClientConfiguration {
+    pub base_url: String,
+    pub sender_email: String,
+}
+
+impl EmailClientConfiguration {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::parse(self.sender_email.clone())
+    }
 }
 
 impl DatabaseConfiguration {
@@ -105,7 +121,8 @@ impl TryFrom<String> for Environment {
 }
 
 /// State needed for various services like psql, redis, etc
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct AppState {
     pub db_pool: PgPool,
+    pub email_client: EmailClient,
 }

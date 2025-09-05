@@ -1,12 +1,10 @@
 use crate::{
-    configuration::{AppState, DatabaseConfiguration, get_configuration},
+    app_state::AppBuilder,
+    configuration::{AppState, DatabaseConfiguration},
     routes::get_router,
-    telemetry::{get_subscriber, init_subscriber},
 };
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::io::Result;
-use tokio::net::TcpListener;
-use uuid::Uuid;
 
 /// Only for integration tests.
 #[derive(Debug)]
@@ -16,7 +14,7 @@ pub struct TestApp {
 }
 
 /// Creating a uuid named db through `PgConnection` and then doing the migrations through `PgPool`
-pub async fn configure_database(settings: DatabaseConfiguration) -> PgPool {
+pub async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
     let mut connection = PgConnection::connect_with(&settings.without_db())
         .await
         .expect("Failed to connect to Postgres.");
@@ -39,24 +37,20 @@ pub async fn configure_database(settings: DatabaseConfiguration) -> PgPool {
 }
 
 pub async fn spawn_app_testing() -> Result<TestApp> {
-    let subscriber = get_subscriber("z2p".into(), "debug".into(), std::io::stdout)?;
-    init_subscriber(subscriber)?;
-
-    let mut settings = get_configuration().expect("Failed to read Configuration");
-    settings.database.name = Uuid::new_v4().to_string();
-
-    let connection_pool = configure_database(settings.database).await;
-
-    let listener = TcpListener::bind("127.0.0.1:0").await?;
-    let actual_address = listener.local_addr()?;
+    let mut app_builder = AppBuilder::new(true)?.init_subscriber()?;
+    let listener = app_builder.create_listener().await?;
+    let address = listener.local_addr()?;
+    let pool = app_builder.create_db_pool().await;
+    let email_client = app_builder.create_email_client();
 
     let test_app = TestApp {
-        addr: format!("http://{actual_address}"),
-        db_pool: connection_pool.clone(),
+        addr: format!("http://{address}"),
+        db_pool: pool.clone(),
     };
 
     let app_state = AppState {
-        db_pool: connection_pool,
+        db_pool: pool,
+        email_client,
     };
 
     let router = get_router(app_state);
