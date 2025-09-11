@@ -3,7 +3,7 @@ use tokio::net::TcpListener;
 use uuid::Uuid;
 
 use crate::{
-    configuration::{AppState, Configuration, get_configuration},
+    configuration::{Configuration, get_configuration},
     email_client::EmailClient,
     startup::configure_test_database,
     telemetry::{get_subscriber, init_subscriber},
@@ -54,6 +54,14 @@ impl AppFactory {
             .email_client
             .sender()
             .expect("Invalid Sender email");
-        EmailClient::new(self.config.email_client.base_url.clone(), sender_email)
+
+        let timeout = self.config.email_client.timeout();
+
+        EmailClient::new(
+            self.config.email_client.base_url.clone(),
+            sender_email,
+            self.config.email_client.authorization_token.clone(),
+            timeout,
+        )
     }
 }

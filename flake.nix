@@ -64,7 +64,7 @@
 
       commonArgs = {
         inherit src buildInputs nativeBuildInputs;
-        SQLX_OFFLINE = true;
+        # SQLX_OFFLINE = true;
         strictDeps = true;
       };
 

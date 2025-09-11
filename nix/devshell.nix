@@ -44,6 +44,5 @@ in {
     ];
 
     DATABASE_URL = "postgres://${db.username}:${db.password}@${db.host}:${db.port}/${db.name}";
-    SQLX_OFFLINE = true;
   };
 }

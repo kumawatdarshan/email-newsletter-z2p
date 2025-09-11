@@ -5,6 +5,8 @@ use validator::ValidateEmail;
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
+    /// We are rejecting RFC5322 due to not being supported by the upstream crate `validator`
+    /// also that, it supports weird unicodes.
     pub fn parse(s: String) -> Result<SubscriberEmail, String> {
         if s.validate_email() {
             return Ok(Self(s));
