@@ -9,6 +9,8 @@ use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 
 pub fn get_configuration() -> Result<Configuration, ConfigError> {
+    dotenvy::dotenv().ok();
+
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_dir = base_path.join("configuration");
 
@@ -60,13 +62,18 @@ pub struct DatabaseConfiguration {
 
 #[derive(Deserialize, Debug)]
 pub struct EmailClientConfiguration {
-    pub base_url: String,
+    pub base_url: reqwest::Url,
     pub sender_email: String,
+    pub authorization_token: SecretString,
+    pub timeout_ms: u64,
 }
 
 impl EmailClientConfiguration {
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::parse(self.sender_email.clone())
+    }
+    pub fn timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.timeout_ms)
     }
 }
 

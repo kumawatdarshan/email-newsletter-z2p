@@ -1,10 +1,9 @@
 // TODO: for dev purposes only, to be removed before pushing
-#![cfg(feature = "sqlx-offline")]
 use axum::http::StatusCode;
 use z2p::startup::spawn_app_testing;
 
 #[tokio::test]
-async fn test_subscribe_valid() {
+async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
     let app = spawn_app_testing().await.expect("Failed to spawn app");
     let client = reqwest::Client::new();
@@ -32,7 +31,7 @@ async fn test_subscribe_valid() {
 }
 
 #[tokio::test]
-async fn test_subscribe_invalid_missing_fields() {
+async fn subscribe_returns_422_when_invalid_fields() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
     let addr = app.addr;
     let client = reqwest::Client::new();
@@ -53,7 +52,7 @@ async fn test_subscribe_invalid_missing_fields() {
             .expect("Failed to execute request.");
 
         assert_eq!(
-            StatusCode::OK,
+            StatusCode::UNPROCESSABLE_ENTITY,
             response.status(),
             "{}",
             format_args!(

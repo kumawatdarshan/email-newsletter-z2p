@@ -10,7 +10,10 @@
 1. Not deploying it. I am... *broke*.
 1. `validator` Crate had massive API changes, Making it easy to validate directly on the struct and thus simplifying alot of the stuff the book manually implemented.
 1. API changes in `fake` crate, the constraints for g is now stricter and requires a type that implements `Rng` trait which comes from `rand` crate.
-
+1. Using `ReSend` for sending mails. Why?
+> 3000/month instead of a 100/day.
+> Doesn't require a professional mail. (primary reason why I used this)
+1. Using `dotenvy` instead of risking API uploads to GitHub
 
 # Side Questing
 
@@ -68,13 +71,28 @@ Missing data for content type `application/x-www-form-urlencoded` results in `UN
 
 
 ```bash
-curl -X POST 'https://api.resend.com/emails' \
- -H 'Authorization: Bearer re_xxxxxxxxx' \
- -H 'Content-Type: application/json' \
- -d $'{
+curl 'https://api.resend.com/emails' \
+     -X POST \
+     -H 'Accept: application/json' \
+     -H 'Content-Type: application/json' \
+     -H 'Authorization: Bearer re_xxxxxxxxx' \
+     -d
+    ```
+```json
+{
+  // maybe a string or string[]
   "from": "Acme <onboarding@resend.dev>",
-  "to": ["delivered@resend.dev"],
+  "to": ["delivered@resend.dev"], 
   "subject": "hello world",
-  "html": "<p>it works!</p>"
-}'
+  "text": "Plain text version",
+  "html": "<p>it works!</p>",
+  "reply_to": "onboarding@resend.dev"
+}
+```
+
+response: 
+```json
+{
+  "id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794"
+}
 ```
