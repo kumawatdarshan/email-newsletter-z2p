@@ -1,9 +1,6 @@
+use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use std::sync::Arc;
-
-use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
-use chrono::Utc;
-use uuid::Uuid;
 
 use crate::{
     configuration::AppState,

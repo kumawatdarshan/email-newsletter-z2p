@@ -1,10 +1,11 @@
-use crate::{
+use sqlx::types::Uuid;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
+use std::io::Result;
+use z2p::{
     app_state::AppFactory,
     configuration::{AppState, DatabaseConfiguration},
     routes::get_router,
 };
-use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::io::Result;
 
 /// Only for integration tests.
 #[derive(Debug)]
@@ -14,7 +15,7 @@ pub struct TestAppState {
 }
 
 /// Creating a uuid named db through `PgConnection` and then doing the migrations through `PgPool`
-pub async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
+async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
     let mut connection = PgConnection::connect_with(&settings.without_db())
         .await
         .expect("Failed to connect to Postgres.");
@@ -39,17 +40,20 @@ pub async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool
 pub async fn spawn_app_testing() -> Result<TestAppState> {
     let mut app_factory = AppFactory::new(true)?.init_subscriber()?;
     let listener = app_factory.create_listener().await?;
-    let db_pool = app_factory.create_db_pool().await;
+
+    app_factory.config.database.name = Uuid::new_v4().to_string();
+    let pool = configure_test_database(&app_factory.config.database).await;
+
     let email_client = app_factory.create_email_client();
 
     let app_state = AppState {
-        db_pool: db_pool.clone(),
+        db_pool: pool.clone(),
         email_client,
     };
 
     let test_app = TestAppState {
         addr: format!("http://{}", listener.local_addr()?),
-        db_pool,
+        db_pool: pool,
     };
 
     let router = get_router(app_state);

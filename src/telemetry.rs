@@ -1,8 +1,7 @@
 use axum::http::Request;
-use std::sync::OnceLock;
 use tower_http::trace::MakeSpan;
 use tracing::Span;
-use tracing::{Subscriber, subscriber::set_global_default};
+use tracing::Subscriber;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, Registry, fmt::MakeWriter, layer::SubscriberExt};
 
@@ -42,15 +41,4 @@ where
         .with(env_filter)
         .with(JsonStorageLayer)
         .with(formatting_layer))
-}
-
-static TRACING: OnceLock<()> = OnceLock::new();
-
-pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) -> Result<(), std::io::Error> {
-    TRACING.get_or_init(|| {
-        tracing_log::LogTracer::init().expect("Failed to set logger.");
-        set_global_default(subscriber).expect("Failed to set tracing-subscriber.");
-    });
-
-    Ok(())
 }

@@ -1,5 +1,5 @@
+use crate::helpers::spawn_app_testing;
 use axum::http::StatusCode;
-use z2p::startup::spawn_app_testing;
 
 /// # Why this complicated test for something simple as health_check?
 /// This is a **black box test**, meaning it is decoupled(*mostly*) from our codebase.
