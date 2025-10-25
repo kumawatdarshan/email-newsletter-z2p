@@ -1,13 +1,23 @@
 use sqlx::PgPool;
-use z2p::{app_state::AppFactory, configuration::AppState, routes::get_router};
+use tokio::net::TcpListener;
+use z2p::app_state::create_email_client;
+use z2p::{
+    app_state::init_tracing,
+    configuration::{AppState, get_configuration},
+    routes::get_router,
+};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let app_factory = AppFactory::new(false)?.init_subscriber()?;
-    let listener = app_factory.create_listener().await?;
+    init_tracing()?;
+    let config = get_configuration().expect("Failed to read Configuration");
 
-    let pool = PgPool::connect_lazy_with(app_factory.config.database.with_db());
-    let email_client = app_factory.create_email_client();
+    let bind_addr = format!("{}:{}", config.application.host, config.application.port);
+    let listener = TcpListener::bind(bind_addr).await?;
+
+    let pool = PgPool::connect_lazy_with(config.database.with_db());
+
+    let email_client = create_email_client(&config);
 
     let app_state = AppState {
         db_pool: pool,
