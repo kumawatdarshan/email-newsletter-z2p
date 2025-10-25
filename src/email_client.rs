@@ -164,10 +164,12 @@ mod tests {
 
     #[tokio::test]
     async fn send_email_timeouts_if_the_server_takes_too_long() {
+        use std::time::Duration;
+
         let mock_server = MockServer::start().await;
         let email_client = email_client(&mock_server.uri());
 
-        let response = ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(10));
+        let response = ResponseTemplate::new(200).set_delay(Duration::from_millis(200));
 
         Mock::given(any())
             .respond_with(response)

@@ -1,13 +1,14 @@
-use sqlx::PgPool;
-use tokio::net::TcpListener;
-use uuid::Uuid;
+use std::sync::OnceLock;
 
 use crate::{
     configuration::{Configuration, get_configuration},
     email_client::EmailClient,
-    startup::configure_test_database,
-    telemetry::{get_subscriber, init_subscriber},
+    telemetry::get_subscriber,
 };
+use tokio::net::TcpListener;
+use tracing::subscriber::set_global_default;
+
+static TRACING: OnceLock<()> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct AppFactory {
@@ -24,7 +25,10 @@ impl AppFactory {
 
     pub fn init_subscriber(self) -> Result<Self, std::io::Error> {
         let subscriber = get_subscriber("z2p".into(), "debug".into(), std::io::stdout)?;
-        init_subscriber(subscriber)?;
+        TRACING.get_or_init(|| {
+            tracing_log::LogTracer::init().expect("Failed to set logger.");
+            set_global_default(subscriber).expect("Failed to set tracing-subscriber.");
+        });
         Ok(self)
     }
 
@@ -37,15 +41,6 @@ impl AppFactory {
 
         let bind_addr = if self.test_mode { test } else { prod };
         TcpListener::bind(bind_addr).await
-    }
-
-    pub async fn create_db_pool(&mut self) -> PgPool {
-        if self.test_mode {
-            self.config.database.name = Uuid::new_v4().to_string();
-            configure_test_database(&self.config.database).await
-        } else {
-            PgPool::connect_lazy_with(self.config.database.with_db())
-        }
     }
 
     pub fn create_email_client(&self) -> EmailClient {

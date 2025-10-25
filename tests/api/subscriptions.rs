@@ -1,6 +1,5 @@
-// TODO: for dev purposes only, to be removed before pushing
+use crate::helpers::spawn_app_testing;
 use axum::http::StatusCode;
-use z2p::startup::spawn_app_testing;
 
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_form_data() {
