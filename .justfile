@@ -20,8 +20,7 @@ test-subcribe:
 test:
     SQLX_OFFLINE=false cargo test
 
-migration:
-    sqlx database create
+migrate:
     sqlx migrate run
 
 nix-run:

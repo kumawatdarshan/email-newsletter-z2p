@@ -1,10 +1,6 @@
 use std::sync::OnceLock;
 
-use crate::{
-    configuration::{Configuration, get_configuration},
-    email_client::EmailClient,
-    telemetry::get_subscriber,
-};
+use crate::{configuration::Configuration, email_client::EmailClient, telemetry::get_subscriber};
 use tokio::net::TcpListener;
 use tracing::subscriber::set_global_default;
 
