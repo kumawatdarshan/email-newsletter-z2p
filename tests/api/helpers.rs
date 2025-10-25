@@ -1,8 +1,10 @@
 use sqlx::types::Uuid;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::io::Result;
+use tokio::net::TcpListener;
+use z2p::app_state::{create_email_client, init_tracing};
+use z2p::configuration::get_configuration;
 use z2p::{
-    app_state::AppFactory,
     configuration::{AppState, DatabaseConfiguration},
     routes::get_router,
 };
@@ -38,13 +40,15 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
 }
 
 pub async fn spawn_app_testing() -> Result<TestAppState> {
-    let mut app_factory = AppFactory::new(true)?.init_subscriber()?;
-    let listener = app_factory.create_listener().await?;
+    init_tracing()?;
+    let mut config = get_configuration().expect("Failed to read Configuration");
 
-    app_factory.config.database.name = Uuid::new_v4().to_string();
-    let pool = configure_test_database(&app_factory.config.database).await;
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
 
-    let email_client = app_factory.create_email_client();
+    config.database.name = Uuid::new_v4().to_string();
+    let pool = configure_test_database(&config.database).await;
+
+    let email_client = create_email_client(&config);
 
     let app_state = AppState {
         db_pool: pool.clone(),
