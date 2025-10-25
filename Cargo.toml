@@ -13,7 +13,7 @@ name = "z2p"
 
 [dependencies]
 axum = {version = "0.8.4", features = ["macros"]}
-config = { version = "0.14", features = ["json"] }
+config = { version = "0.15", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.46.0", features = ["rt-multi-thread"] }
 tower = { version = "0.5.2"}
