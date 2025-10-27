@@ -11,7 +11,7 @@ use subscription::*;
 use tower::ServiceBuilder;
 use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
 
-pub fn get_router(connection: AppState) -> Router {
+pub fn get_router(app_state: AppState) -> Router {
     let middlewares = ServiceBuilder::new()
         .set_x_request_id(MakeRequestUuid)
         .layer(TraceLayer::new_for_http().make_span_with(RequestIdMakeSpan))
@@ -21,5 +21,5 @@ pub fn get_router(connection: AppState) -> Router {
         .route("/health", get(health_check))
         .route("/subscribe", post(subscribe))
         .layer(middlewares)
-        .with_state(connection.into())
+        .with_state(app_state.into())
 }
