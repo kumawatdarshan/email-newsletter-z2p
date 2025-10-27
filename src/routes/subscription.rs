@@ -82,6 +82,7 @@ async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result
     Ok(())
 }
 
+#[tracing::instrument(name = "Sending Confirmation mail", skip(email_client, new_subscriber))]
 pub async fn send_confirmation_email(
     email_client: &EmailClient,
     new_subscriber: NewSubscriber,
