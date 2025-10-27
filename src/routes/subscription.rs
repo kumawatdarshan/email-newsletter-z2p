@@ -6,32 +6,8 @@ use std::sync::Arc;
 use crate::{
     configuration::AppState,
     domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    email_client::EmailClient,
 };
-
-#[tracing::instrument(
-    name = "Saving new subscriber details in the database."
-    skip(state, form)
-)]
-async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-            INSERT INTO subscriptions (id, email,name, subscribed_at, status)
-            VALUES ($1,$2,$3,$4, 'confirmed')
-        "#,
-        Uuid::new_v4(),
-        form.email.as_ref(),
-        form.name.as_ref(),
-        Utc::now()
-    )
-    .execute(&state.db_pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {e:#?}");
-        e
-    })?;
-
-    Ok(())
-}
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -70,8 +46,58 @@ pub async fn subscribe(
         .try_into()
         .map_err(|_| StatusCode::UNPROCESSABLE_ENTITY)?;
 
-    insert_subscriber(state, &new_subscriber)
+    insert_subscriber(state.clone(), &new_subscriber)
         .await
-        .map(|_| StatusCode::CREATED)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    send_confirmation_email(&state.email_client, new_subscriber)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database.",
+    skip(state, form)
+)]
+async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+            INSERT INTO subscriptions (id, email,name, subscribed_at, status)
+            VALUES ($1,$2,$3,$4, 'pending_confirmation')
+        "#,
+        Uuid::new_v4(),
+        form.email.as_ref(),
+        form.name.as_ref(),
+        Utc::now()
+    )
+    .execute(&state.db_pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {e:#?}");
+        e
+    })?;
+
+    Ok(())
+}
+
+pub async fn send_confirmation_email(
+    email_client: &EmailClient,
+    new_subscriber: NewSubscriber,
+) -> Result<(), reqwest::Error> {
+    let confirmation_link = "https://nosuchdomain.com/subscriptions/confirm";
+    let html = format!(
+        "Welcome to our newsletter!<br />\
+    Click <a href=\"{confirmation_link}\">here</a> to confirm your subscription."
+    );
+
+    let plaintext = format!(
+        "Welcome to our newsletter!\
+        Visit {confirmation_link} to confirm your subscription."
+    );
+
+    email_client
+        .send_email(new_subscriber.email, "Welcome!", &html, &plaintext)
+        .await
 }
