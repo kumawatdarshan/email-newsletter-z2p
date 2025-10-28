@@ -1,6 +1,11 @@
 use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
+use rand::Rng;
+use rand::distr::Alphanumeric;
 use serde::Deserialize;
-use sqlx::types::{Uuid, chrono::Utc};
+use sqlx::{
+    PgPool,
+    types::{Uuid, chrono::Utc},
+};
 use std::sync::Arc;
 use tracing::warn;
 
@@ -27,9 +32,16 @@ impl TryFrom<FormData> for NewSubscriber {
     }
 }
 
-/// - `201 Created` on success
-/// - `422 UNPROCESSABLE_ENTITY` if the input validation fails
-/// - `500 Internal Server Error` if inserting into the database fails
+/// Handles new subscription requests.
+///
+/// # Responses
+///
+/// - **`201 Created`** — Subscription created successfully.
+/// - **`422 Unprocessable Entity`** — Input validation failed.
+/// - **`500 Internal Server Error`** — One of the following operations failed:
+///   - Inserting the subscriber into the database.
+///   - Storing the `subscription_token`.
+///   - Sending the confirmation email.
 #[tracing::instrument(
     name = "Adding a new Subscriber",
     skip(state, form),
@@ -38,7 +50,6 @@ impl TryFrom<FormData> for NewSubscriber {
         subscriber_name = %form.name,
     )
 )]
-#[axum::debug_handler]
 pub async fn subscribe(
     State(state): State<Arc<AppState>>,
     Form(form): Form<FormData>,
@@ -47,25 +58,40 @@ pub async fn subscribe(
         .try_into()
         .map_err(|_| StatusCode::UNPROCESSABLE_ENTITY)?;
 
-    insert_subscriber(state.clone(), &new_subscriber)
+    let subscriber_id = insert_subscriber(state.clone(), &new_subscriber)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    send_confirmation_email(&state.email_client, new_subscriber, &state.base_url)
+    let subscription_token = generate_subscription_token();
+
+    store_token(&state.db_pool, subscriber_id, &subscription_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    send_confirmation_email(
+        &state.email_client,
+        new_subscriber,
+        &state.base_url,
+        &subscription_token,
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::CREATED)
 }
 
 #[tracing::instrument(name = "Saving new subscriber details in the database.")]
-async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result<(), sqlx::Error> {
+async fn insert_subscriber(
+    state: Arc<AppState>,
+    form: &NewSubscriber,
+) -> Result<Uuid, sqlx::Error> {
+    let subscriber_id = Uuid::new_v4();
     sqlx::query!(
         r#"
             INSERT INTO subscriptions (id, email,name, subscribed_at, status)
             VALUES ($1,$2,$3,$4, 'pending_confirmation')
         "#,
-        Uuid::new_v4(),
+        subscriber_id,
         form.email.as_ref(),
         form.name.as_ref(),
         Utc::now()
@@ -77,18 +103,23 @@ async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result
         e
     })?;
 
-    Ok(())
+    Ok(subscriber_id)
 }
 
-#[tracing::instrument(name = "Sending Confirmation mail", skip(email_client, new_subscriber))]
+#[tracing::instrument(
+    name = "Sending Confirmation mail",
+    skip(email_client, new_subscriber, base_url, subscription_token)
+)]
 pub async fn send_confirmation_email(
     email_client: &EmailClient,
     new_subscriber: NewSubscriber,
-    base_url: &String,
+    base_url: &str,
+    subscription_token: &str,
 ) -> Result<(), reqwest::Error> {
     warn!(base_url);
     // TODO: LOGS SHOULD EMIT IF I MISSED A ARG
-    let confirmation_link = format!("{}/subscribe/confirm?subscription_token=mytoken", base_url);
+    let confirmation_link =
+        format!("{base_url}/subscribe/confirm?subscription_token={subscription_token}");
 
     let html = format!(
         "Welcome to our newsletter!<br />\
@@ -103,4 +134,39 @@ pub async fn send_confirmation_email(
     email_client
         .send_email(new_subscriber.email, "Welcome!", &html, &plaintext)
         .await
+}
+
+#[tracing::instrument(
+    name = "Store subscription token in the database",
+    skip(subscription_token, pool)
+)]
+pub async fn store_token(
+    pool: &PgPool,
+    subscriber_id: Uuid,
+    subscription_token: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+            INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+            VALUES ($1, $2)
+        "#,
+        subscription_token,
+        subscriber_id,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {e:#?}");
+        e
+    })?;
+
+    Ok(())
+}
+
+fn generate_subscription_token() -> String {
+    let mut rng = rand::rng();
+    std::iter::repeat_with(|| rng.sample(Alphanumeric))
+        .map(char::from)
+        .take(25)
+        .collect()
 }

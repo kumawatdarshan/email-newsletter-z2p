@@ -1,23 +1,16 @@
 use crate::helpers::spawn_app_testing;
 use axum::http::StatusCode;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
-    Mock::given(path("/email"))
-        .and(method("POST"))
-        .respond_with(ResponseTemplate::new(200))
-        .expect(1)
-        .mount(&app.email_server)
-        .await;
+    let body = app.fake_body();
 
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    app.mock_mail_server(StatusCode::OK).await;
 
-    let response = app.post_subscriptions(body.into()).await;
+    let response = app.post_subscriptions(body).await;
 
     // Assert
     assert_eq!(StatusCode::CREATED, response.status());
@@ -27,16 +20,10 @@ async fn subscribe_returns_200_for_valid_form_data() {
 async fn subscribe_persists_the_new_subscriber() {
     // Arrange
     let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let body = app.fake_body();
 
-    Mock::given(path("/email"))
-        .and(method("POST"))
-        .respond_with(ResponseTemplate::new(200))
-        .expect(1)
-        .mount(&app.email_server)
-        .await;
-
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
-    let response = app.post_subscriptions(body.into()).await;
+    app.mock_mail_server(StatusCode::OK).await;
+    let response = app.post_subscriptions(body).await;
 
     // Assert
     assert_eq!(StatusCode::CREATED, response.status());
@@ -79,17 +66,14 @@ async fn subscribe_returns_422_when_invalid_fields() {
 #[tokio::test]
 async fn subscribe_sends_a_confirmation_link_for_valid_data() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    let body = app.fake_body();
 
-    Mock::given(path("/email"))
-        .and(method("POST"))
-        .respond_with(ResponseTemplate::new(200))
-        .mount(&app.email_server)
-        .await;
+    app.mock_mail_server(StatusCode::OK).await;
 
-    app.post_subscriptions(body.into()).await;
+    app.post_subscriptions(body).await;
 
-    let confirmation_links = app.get_links().await;
+    let email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let confirmation_links = app.retrieve_links(email_request);
 
     assert_eq!(confirmation_links.html, confirmation_links.plaintext);
 }

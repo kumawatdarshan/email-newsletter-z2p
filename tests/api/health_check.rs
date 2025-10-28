@@ -13,6 +13,7 @@ use axum::http::StatusCode;
 /// ### Although I am honestly not entirely convinced...
 /// If i even need this, I am canonizing it as the author introducing me to integration testing and that i don't actually need this in rust world. could be wrong.
 /// Update: it was totally worth it. I now know the struggles of integration testing and how to get around them.
+/// Update 2: New Revelation. `/health` endpoint is rather common, it is used to test if our service is alive.
 #[tokio::test]
 async fn test_health_check() {
     // Arrange

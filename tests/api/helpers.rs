@@ -1,9 +1,11 @@
-use reqwest::Url;
+use reqwest::{StatusCode, Url};
 use sqlx::types::Uuid;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::io::Result;
 use tokio::net::TcpListener;
-use wiremock::MockServer;
+use tracing::warn;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 use z2p::app_state::{create_email_client, init_tracing};
 use z2p::configuration::get_configuration;
 use z2p::{
@@ -37,9 +39,8 @@ impl TestApp {
             .expect("Failed to execute request.")
     }
 
-    pub async fn get_links(&self) -> ConfirmationLinks {
-        let email_request = &self.email_server.received_requests().await.unwrap()[0];
-
+    /// retrieve links from an email using `linkify`
+    pub fn retrieve_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
         let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
 
         let get_link = |s: &str| {
@@ -51,6 +52,7 @@ impl TestApp {
 
             let raw_link = links[0].as_str().to_owned();
             let confirmation_link = Url::parse(&raw_link).unwrap();
+            warn!("{:#?}", confirmation_link.port());
             assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
 
             confirmation_link
@@ -60,6 +62,18 @@ impl TestApp {
         let plaintext = get_link(body["text"].as_str().unwrap());
 
         ConfirmationLinks { html, plaintext }
+    }
+
+    pub fn fake_body(&self) -> String {
+        "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
+    }
+
+    pub async fn mock_mail_server(&self, status_code: StatusCode) {
+        Mock::given(path("/email"))
+            .and(method("POST"))
+            .respond_with(ResponseTemplate::new(status_code))
+            .mount(&self.email_server)
+            .await
     }
 }
 
@@ -86,6 +100,11 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
     connection_pool
 }
 
+/// It does the following:
+/// 1. Tracing
+/// 1. Mock Email Server
+/// 1. Mutates configuration for test needs
+/// 1. Spawns a tokio thread for running the axum server
 pub async fn spawn_app_testing() -> Result<TestApp> {
     init_tracing()?;
 
