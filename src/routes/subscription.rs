@@ -2,6 +2,7 @@ use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use sqlx::types::{Uuid, chrono::Utc};
 use std::sync::Arc;
+use tracing::warn;
 
 use crate::{
     configuration::AppState,
@@ -85,7 +86,9 @@ pub async fn send_confirmation_email(
     new_subscriber: NewSubscriber,
     base_url: &String,
 ) -> Result<(), reqwest::Error> {
-    let confirmation_link = format!("{}/subscriptions/confirm", base_url);
+    warn!(base_url);
+    // TODO: LOGS SHOULD EMIT IF I MISSED A ARG
+    let confirmation_link = format!("{}/subscribe/confirm?subscription_token=mytoken", base_url);
 
     let html = format!(
         "Welcome to our newsletter!<br />\

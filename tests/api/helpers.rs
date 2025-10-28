@@ -89,8 +89,6 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
 pub async fn spawn_app_testing() -> Result<TestApp> {
     init_tracing()?;
 
-    let base_url = "127.0.0.1:0".to_string();
-    let listener = TcpListener::bind(&base_url).await?;
     let email_server = MockServer::start().await;
 
     let config = {
@@ -99,23 +97,31 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
             .map_err(|_| std::io::ErrorKind::InvalidInput)?;
         c.database.name = Uuid::new_v4().to_string();
         c.email_client.base_url = email_client_url;
+        // randomized OS port
+        c.application.port = 0;
         c
     };
 
-    let db_pool = configure_test_database(&config.database).await;
+    let base_url = format!("{}:{}", config.application.host, config.application.port);
+    let listener = TcpListener::bind(&base_url).await?;
 
+    let address = {
+        let x = listener.local_addr()?;
+        format!("http://{x}")
+    };
+
+    let db_pool = configure_test_database(&config.database).await;
     let email_client = create_email_client(&config);
+    let api_client = reqwest::Client::new();
 
     let app_state = AppState {
         db_pool: db_pool.clone(),
+        base_url: address.clone(),
         email_client,
-        base_url,
     };
 
-    let api_client = reqwest::Client::new();
-
     let test_app = TestApp {
-        address: format!("http://{}", listener.local_addr()?),
+        address,
         db_pool,
         email_server,
         api_client,
