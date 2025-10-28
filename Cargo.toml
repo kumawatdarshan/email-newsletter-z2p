@@ -1,7 +1,7 @@
 [package]
 name = "z2p"
 version = "0.1.0"
-authors = ["Darshan Kumawat <kumawatdarshan.1304@gmail.com>"]
+authors = ["Darshan Kumawat <mail@darshan.qzz.io>"]
 edition = "2024"
 
 [lib]
@@ -52,4 +52,3 @@ fake = "4.3.0"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.1.0"
 serde_json = "1.0.143"
-

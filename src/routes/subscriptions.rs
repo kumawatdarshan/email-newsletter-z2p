@@ -3,7 +3,7 @@ use rand::Rng;
 use rand::distr::Alphanumeric;
 use serde::Deserialize;
 use sqlx::{
-    PgPool, Postgres, Transaction,
+    Postgres, Transaction,
     types::{Uuid, chrono::Utc},
 };
 use std::sync::Arc;
