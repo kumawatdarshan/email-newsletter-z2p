@@ -12,8 +12,8 @@ async fn main() -> std::io::Result<()> {
     init_tracing()?;
     let config = get_configuration().expect("Failed to read Configuration");
 
-    let bind_addr = format!("{}:{}", config.application.host, config.application.port);
-    let listener = TcpListener::bind(bind_addr).await?;
+    let base_url = format!("{}:{}", config.application.host, config.application.port);
+    let listener = TcpListener::bind(&base_url).await?;
 
     let pool = PgPool::connect_lazy_with(config.database.with_db());
 
@@ -22,6 +22,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState {
         db_pool: pool,
         email_client,
+        base_url,
     };
 
     let router = get_router(app_state);

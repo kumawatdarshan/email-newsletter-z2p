@@ -16,6 +16,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
         .await;
 
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
     let response = app.post_subscriptions(body.into()).await;
 
     // Assert
@@ -88,22 +89,7 @@ async fn subscribe_sends_a_confirmation_link_for_valid_data() {
 
     app.post_subscriptions(body.into()).await;
 
-    let email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let confirmation_links = app.get_links().await;
 
-    let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
-
-    let get_link = |s: &str| {
-        let links: Vec<_> = linkify::LinkFinder::new()
-            .links(s)
-            .filter(|l| *l.kind() == linkify::LinkKind::Url)
-            .collect();
-        assert_eq!(links.len(), 1);
-        links[0].as_str().to_owned()
-    };
-
-    let html_link = get_link(body["html"].as_str().unwrap());
-
-    let text_link = get_link(body["text"].as_str().unwrap());
-
-    assert_eq!(html_link, text_link);
+    assert_eq!(confirmation_links.html, confirmation_links.plaintext);
 }

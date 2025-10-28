@@ -50,17 +50,14 @@ pub async fn subscribe(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    send_confirmation_email(&state.email_client, new_subscriber)
+    send_confirmation_email(&state.email_client, new_subscriber, &state.base_url)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::CREATED)
 }
 
-#[tracing::instrument(
-    name = "Saving new subscriber details in the database.",
-    skip(state, form)
-)]
+#[tracing::instrument(name = "Saving new subscriber details in the database.")]
 async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -86,8 +83,10 @@ async fn insert_subscriber(state: Arc<AppState>, form: &NewSubscriber) -> Result
 pub async fn send_confirmation_email(
     email_client: &EmailClient,
     new_subscriber: NewSubscriber,
+    base_url: &String,
 ) -> Result<(), reqwest::Error> {
-    let confirmation_link = "https://nosuchdomain.com/subscriptions/confirm";
+    let confirmation_link = format!("{}/subscriptions/confirm", base_url);
+
     let html = format!(
         "Welcome to our newsletter!<br />\
     Click <a href=\"{confirmation_link}\">here</a> to confirm your subscription."

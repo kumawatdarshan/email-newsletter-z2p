@@ -48,6 +48,7 @@ pub struct Configuration {
 pub struct ApplicationConfiguration {
     pub port: Port,
     pub host: String,
+    pub base_url: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -132,4 +133,5 @@ impl TryFrom<String> for Environment {
 pub struct AppState {
     pub db_pool: PgPool,
     pub email_client: EmailClient,
+    pub base_url: String,
 }

@@ -1,3 +1,4 @@
+use reqwest::Url;
 use sqlx::types::Uuid;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::io::Result;
@@ -13,21 +14,52 @@ use z2p::{
 /// Only for integration tests.
 #[derive(Debug)]
 pub struct TestApp {
-    pub addr: String,
+    pub address: String,
     pub db_pool: PgPool,
     pub email_server: MockServer,
     pub api_client: reqwest::Client,
 }
 
+#[derive(Debug)]
+pub struct ConfirmationLinks {
+    pub html: Url,
+    pub plaintext: Url,
+}
+
 impl TestApp {
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
-            .post(format!("{}/subscribe", &self.addr))
+            .post(format!("{}/subscribe", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
             .await
             .expect("Failed to execute request.")
+    }
+
+    pub async fn get_links(&self) -> ConfirmationLinks {
+        let email_request = &self.email_server.received_requests().await.unwrap()[0];
+
+        let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            assert_eq!(links.len(), 1);
+
+            let raw_link = links[0].as_str().to_owned();
+            let confirmation_link = Url::parse(&raw_link).unwrap();
+            assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+
+            confirmation_link
+        };
+
+        let html = get_link(body["html"].as_str().unwrap());
+        let plaintext = get_link(body["text"].as_str().unwrap());
+
+        ConfirmationLinks { html, plaintext }
     }
 }
 
@@ -57,7 +89,8 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
 pub async fn spawn_app_testing() -> Result<TestApp> {
     init_tracing()?;
 
-    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let base_url = "127.0.0.1:0".to_string();
+    let listener = TcpListener::bind(&base_url).await?;
     let email_server = MockServer::start().await;
 
     let config = {
@@ -76,12 +109,13 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
     let app_state = AppState {
         db_pool: db_pool.clone(),
         email_client,
+        base_url,
     };
 
     let api_client = reqwest::Client::new();
 
     let test_app = TestApp {
-        addr: format!("http://{}", listener.local_addr()?),
+        address: format!("http://{}", listener.local_addr()?),
         db_pool,
         email_server,
         api_client,
