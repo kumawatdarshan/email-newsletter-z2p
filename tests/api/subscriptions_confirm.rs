@@ -32,6 +32,7 @@ async fn link_returned_by_subscribe_returns_a_200() {
     let confirmation_links = app.get_links().await;
 
     let response = reqwest::get(confirmation_links.html).await.unwrap();
+    dbg!(&response);
 
     assert_eq!(StatusCode::OK, response.status());
 }
