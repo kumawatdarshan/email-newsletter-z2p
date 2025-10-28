@@ -33,7 +33,7 @@
         "rust-analyzer"
       ];
 
-      craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+      craneLib = (crane.mkLib pkgs);
 
       src = pkgs.lib.fileset.toSource {
         root = ./.;

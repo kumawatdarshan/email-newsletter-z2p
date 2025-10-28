@@ -5,15 +5,17 @@
   commonArgs,
   cargoArtifacts,
 }: let
+  isLinux = pkgs.lib.optionals pkgs.stdenv.isLinux;
   inherit (meta) name version;
 in rec {
+  # YOU NEED TO RUN `cargo sqlx prepare -- --release` FOR THIS
   default = craneLib.buildPackage (commonArgs
     // {
       inherit version cargoArtifacts;
       inherit (commonArgs) buildInputs nativeBuildInputs;
       doCheck = false;
       pname = name;
-      RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
+      RUSTFLAGS = "-C target-cpu=native" ++ isLinux "-C link-arg=-fuse-ld=mold";
     });
 
   docker = let

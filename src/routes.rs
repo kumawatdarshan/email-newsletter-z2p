@@ -1,5 +1,5 @@
 pub mod health;
-pub mod subscription;
+pub mod subscriptions;
 pub mod subscriptions_confirm;
 
 use crate::telemetry::RequestIdMakeSpan;
@@ -11,7 +11,7 @@ use axum::{
     routing::{get, post},
 };
 use health::*;
-use subscription::*;
+use subscriptions::*;
 use tower::ServiceBuilder;
 use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
 use tracing::warn;
