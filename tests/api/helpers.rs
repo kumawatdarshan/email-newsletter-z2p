@@ -3,7 +3,6 @@ use sqlx::types::Uuid;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::io::Result;
 use tokio::net::TcpListener;
-use tracing::warn;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 use z2p::app_state::{create_email_client, init_tracing};
@@ -52,7 +51,6 @@ impl TestApp {
 
             let raw_link = links[0].as_str().to_owned();
             let confirmation_link = Url::parse(&raw_link).unwrap();
-            warn!("{:#?}", confirmation_link.port());
             assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
 
             confirmation_link

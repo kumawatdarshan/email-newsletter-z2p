@@ -1,3 +1,8 @@
+use crate::{
+    configuration::AppState,
+    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    email_client::EmailClient,
+};
 use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
 use rand::Rng;
 use rand::distr::Alphanumeric;
@@ -7,13 +12,6 @@ use sqlx::{
     types::{Uuid, chrono::Utc},
 };
 use std::sync::Arc;
-use tracing::warn;
-
-use crate::{
-    configuration::AppState,
-    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
-    email_client::EmailClient,
-};
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -130,7 +128,6 @@ pub async fn send_confirmation_email(
     base_url: &str,
     subscription_token: &str,
 ) -> Result<(), reqwest::Error> {
-    warn!(base_url);
     // TODO: LOGS SHOULD EMIT IF I MISSED A ARG
     let confirmation_link =
         format!("{base_url}/subscribe/confirm?subscription_token={subscription_token}");

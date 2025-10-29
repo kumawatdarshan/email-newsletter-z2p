@@ -1,14 +1,20 @@
-name: Check and perform Tests
-on: [push, pull_request]
+name: Check, Test and Publish
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 env:
   CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE_NAME: kumawatdarshan/z2p
 
 jobs:
-  test:
-    name: Test
+  checks:
+    name: Format, Lint, and Test
     runs-on: ubuntu-latest
-    # TODO: create a custom action that can process a configuration.{yaml,json} file 
     services:
       postgres:
         image: postgres:latest
@@ -23,12 +29,13 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Set up Rust cache
+
+      - name: Cache Rust build
         uses: actions/cache@v4
         with:
           path: |
@@ -38,6 +45,8 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Run database migrations
         run: nix develop --command sqlx migrate run
@@ -45,8 +54,73 @@ jobs:
       - name: Check Rust formatting
         run: nix develop --command cargo fmt --check
 
-      - name: Lint Code
+      - name: Lint code
         run: nix develop --command cargo clippy -- -D warnings
 
       - name: Run tests
         run: nix develop --command cargo test
+
+  build-docker:
+    name: Build Docker image
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      remote_image: ${{ steps.tag.outputs.remote_image }}
+      version: ${{ steps.tag.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.docker-cache
+          key: docker-${{ github.sha }}
+          restore-keys: docker-
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build Docker image
+        run: nix build .#docker
+
+      - name: Load image into Docker
+        id: load
+        run: |
+          IMAGE_PATH=$(readlink -f result)
+          echo "Loading image from $IMAGE_PATH"
+          IMAGE_ID=$(docker load -i "$IMAGE_PATH" | sed -n 's/^Loaded image: //p')
+          echo "Loaded image: $IMAGE_ID"
+          echo "image=$IMAGE_ID" >> $GITHUB_OUTPUT
+
+      - name: Tag Docker image
+        id: tag
+        run: |
+          LOCAL_IMAGE=${{ steps.load.outputs.image }}
+          VERSION=$(date +%Y%m%d)-${GITHUB_SHA::7} 
+          REMOTE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} 
+
+          echo "Tagging $LOCAL_IMAGE as $REMOTE_IMAGE:$VERSION and $REMOTE_IMAGE:latest"
+          docker tag $LOCAL_IMAGE "$REMOTE_IMAGE:latest"
+          docker tag $LOCAL_IMAGE "$REMOTE_IMAGE:$VERSION"
+
+          echo "remote_image=$REMOTE_IMAGE" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+
+      - name: Push Docker image
+        run: |
+          REMOTE_IMAGE=${{ steps.tag.outputs.remote_image }} # this is empty apparently
+          VERSION=${{ steps.tag.outputs.version }}
+
+          echo "Pushing $REMOTE_IMAGE:latest and $REMOTE_IMAGE:$VERSION to GHCR"
+          docker push "$REMOTE_IMAGE:latest"
+          docker push "$REMOTE_IMAGE:$VERSION"

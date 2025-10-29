@@ -15,7 +15,7 @@ in rec {
       inherit (commonArgs) buildInputs nativeBuildInputs;
       doCheck = false;
       pname = name;
-      RUSTFLAGS = "-C target-cpu=native" ++ isLinux "-C link-arg=-fuse-ld=mold";
+      RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
     });
 
   docker = let
@@ -34,7 +34,7 @@ in rec {
   in
     pkgs.dockerTools.buildLayeredImage {
       inherit name;
-      tag = "v${version}";
+      tag = "latest";
       contents = [runtime];
       config = {
         Entrypoint = [bin];
