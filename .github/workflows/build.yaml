@@ -39,10 +39,11 @@ jobs:
             ./target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Run database migrations
+        run: nix develop --command sqlx migrate run
+
       - name: Check Rust formatting
-        run: |
-          nix develop --command \
-            cargo fmt --check
+        run: nix develop --command cargo fmt --check
 
       - name: Lint Code
         run: nix develop --command cargo clippy -- -D warnings
