@@ -24,15 +24,6 @@
       pkgs = import nixpkgs {
         inherit system overlays;
       };
-      rustToolchain = pkgs.fenix.minimal.withComponents [
-        "cargo"
-        "clippy"
-        "rust-src"
-        "rustc"
-        "rustfmt"
-        "rust-analyzer"
-      ];
-
       craneLib = (crane.mkLib pkgs);
 
       src = pkgs.lib.fileset.toSource {

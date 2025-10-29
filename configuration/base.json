@@ -11,7 +11,9 @@
 		"require_ssl": "false"
 	},
 	"email_client": {
-		"base_url": "https://api.resend.com/emails",
+		"base_url": "http://almost-fake-fancy-mail.com/api",
+		"sender_email": "test@gmail.com",
+		"authorization_token": "my-secret-token",
 		"timeout_ms": 10000
 	}
 }
