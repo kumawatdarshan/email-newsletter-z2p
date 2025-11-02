@@ -37,6 +37,7 @@ in {
       curlie
       cargo-watch
       cargo-expand
+      bunyan-rs
     ];
 
     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [

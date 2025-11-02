@@ -77,3 +77,19 @@ async fn subscribe_sends_a_confirmation_link_for_valid_data() {
 
     assert_eq!(confirmation_links.html, confirmation_links.plaintext);
 }
+
+#[tokio::test]
+async fn subscribe_fails_if_there_is_fatal_db_error() {
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let body = app.fake_body();
+
+    // Sabotaging the db
+    sqlx::query!("ALTER TABLE subscription_tokens DROP COLUMN subscription_token")
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+
+    let response = app.post_subscriptions(body).await;
+
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
