@@ -27,5 +27,6 @@ async fn main() -> std::io::Result<()> {
 
     let router = get_router(app_state);
 
+    tracing::debug!("Listening on port: {}", config.application.port);
     axum::serve(listener, router).await
 }

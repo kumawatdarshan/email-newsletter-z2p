@@ -34,9 +34,10 @@ pub fn get_router(app_state: AppState) -> Router {
         .with_state(app_state.into())
 }
 
-async fn handle_404(uri: Uri) -> impl IntoResponse {
+// Only for debugging. Should be removed in production to declutter the logs.
+async fn handle_404(uri: Uri) -> StatusCode {
     warn!("Route not found: {}", uri);
-    (StatusCode::NOT_FOUND, "Not found")
+    StatusCode::NOT_FOUND
 }
 
 #[derive(Serialize)]

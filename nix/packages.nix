@@ -5,7 +5,6 @@
   commonArgs,
   cargoArtifacts,
 }: let
-  isLinux = pkgs.lib.optionals pkgs.stdenv.isLinux;
   inherit (meta) name version;
 in rec {
   # YOU NEED TO RUN `cargo sqlx prepare -- --release` FOR THIS
@@ -16,6 +15,7 @@ in rec {
       doCheck = false;
       pname = name;
       RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
+      SQLX_OFFLINE = true;
     });
 
   docker = let

@@ -37,25 +37,14 @@
       };
 
       # runtime deps
-      buildInputs = with pkgs; [
-        openssl
-      ];
+      buildInputs = [ ];
       # Build deps
-      nativeBuildInputs = let
-        isLinux = pkgs.lib.optionals pkgs.stdenv.isLinux;
-      in
-        with pkgs;
-          [
-            pkg-config
-            sqlx-cli
-          ]
-          ++ isLinux [
-            mold
-          ];
-
+      nativeBuildInputs = with pkgs; [
+        sqlx-cli
+        mold
+      ];
       commonArgs = {
         inherit src buildInputs nativeBuildInputs;
-        # SQLX_OFFLINE = true;
         strictDeps = true;
       };
 
