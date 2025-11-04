@@ -15,9 +15,9 @@
   };
 
   outputs = inputs: let
-    inherit (inputs) self nixpkgs fenix flake-utils crane;
+    inherit (inputs) nixpkgs fenix flake-utils crane;
     config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
-    meta = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
+    meta = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package;
   in
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [fenix.overlays.default];

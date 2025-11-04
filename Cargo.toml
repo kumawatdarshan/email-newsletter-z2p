@@ -1,25 +1,25 @@
-[package]
-name = "z2p"
+[workspace.package]
 version = "0.1.0"
 authors = ["Darshan Kumawat <mail@darshan.qzz.io>"]
 edition = "2024"
+categories = ["api", "email", "newsletter"]
+repository = "https://github.com/kumawatdarshan/email-newsletter-z2p"
 
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-path = "src/main.rs"
-name = "z2p"
+[workspace]
+resolver = "3"
+members = [
+  "crates/*",
+]
 
 [profile.release]
 opt-level = 3           
-lto = "fat"             
+lto = "thin"             
 codegen-units = 1       
 strip = true            
 panic = "abort"         
 debug = false           
 
-[dependencies]
+[workspace.dependencies]
 axum = { version = "0.8.4", features = ["macros"] }
 config = { version = "0.15", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
@@ -43,22 +43,10 @@ dotenvy = "0.15.7"
 linkify = "0.10.0"
 thiserror = "2.0.17"
 anyhow = "1.0.100"
-
-[dependencies.sqlx]
-version = "0.8.6"
-default-features = false
-features = [
-"runtime-tokio-rustls",
-"macros",
-"postgres",
-"uuid",
-"chrono",
-"migrate"
-]
-
-[dev-dependencies]
 claims = "0.8.0"
 fake = "4.3.0"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.1.0"
 serde_json = "1.0.143"
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate" ] }
+

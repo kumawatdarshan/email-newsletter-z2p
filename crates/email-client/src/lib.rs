@@ -1,8 +1,6 @@
-use crate::domain::SubscriberEmail;
-use reqwest::Client;
-use reqwest::Url;
-use secrecy::ExposeSecret;
-use secrecy::SecretString;
+use domain::SubscriberEmail;
+use reqwest::{Client, Url};
+use secrecy::{ExposeSecret, SecretString};
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -67,8 +65,8 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{domain::SubscriberEmail, email_client::EmailClient};
     use claims::{assert_err, assert_ok};
+    use domain::SubscriberEmail;
     use fake::{
         Fake, Faker,
         faker::{
@@ -82,6 +80,8 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
         matchers::{any, header, header_exists, method, path},
     };
+
+    use crate::EmailClient;
 
     fn email_client(mock_server: &str) -> EmailClient {
         let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();

@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use crate::{FormatterExt, ResponseMessage};
 use anyhow::Context;
 use axum::{
     Json,
@@ -8,12 +7,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
+use settings::AppState;
 use sqlx::{PgPool, types::Uuid};
-
-use crate::{
-    configuration::AppState,
-    routes::{FormatterExt, ResponseMessage},
-};
+use std::sync::Arc;
 
 #[derive(Debug, Deserialize)]
 pub struct Parameters {

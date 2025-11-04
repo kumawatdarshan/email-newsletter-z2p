@@ -1,0 +1,15 @@
+[package]
+name = "settings"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+config.workspace = true
+secrecy.workspace = true
+serde.workspace = true
+reqwest.workspace = true
+sqlx.workspace = true
+dotenvy.workspace = true
+tracing-log.workspace = true
+domain = { path = "../domain" }
+email-client = { path = "../email-client" }

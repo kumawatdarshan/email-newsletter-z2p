@@ -24,7 +24,7 @@ impl AsRef<str> for SubscriberEmail {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::SubscriberEmail;
+    use crate::SubscriberEmail;
     use claims::assert_err;
     use fake::Fake;
     use fake::faker::internet::en::SafeEmail;

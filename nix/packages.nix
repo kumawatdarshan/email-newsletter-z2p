@@ -5,7 +5,8 @@
   commonArgs,
   cargoArtifacts,
 }: let
-  inherit (meta) name version;
+  name = "z2p";
+  inherit (meta) version;
 in rec {
   # YOU NEED TO RUN `cargo sqlx prepare -- --release` FOR THIS
   default = craneLib.buildPackage (commonArgs

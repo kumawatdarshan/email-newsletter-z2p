@@ -1,0 +1,17 @@
+[package]
+name = "email-client"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+secrecy.workspace = true
+serde.workspace = true
+reqwest.workspace = true
+domain = { path = "../domain" }
+
+[dev-dependencies]
+claims.workspace = true
+fake.workspace = true
+wiremock.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

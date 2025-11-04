@@ -2,19 +2,21 @@ pub mod health;
 pub mod subscriptions;
 pub mod subscriptions_confirm;
 
-use crate::telemetry::RequestIdMakeSpan;
-use crate::{configuration::AppState, routes::subscriptions_confirm::confirm};
-use axum::http::{StatusCode, Uri};
-use axum::response::IntoResponse;
 use axum::{
     Router,
+    http::{StatusCode, Uri},
     routing::{get, post},
 };
 use health::*;
 use serde::Serialize;
-use std::error::Error;
-use std::fmt::{self};
+use settings::AppState;
+use std::{
+    error::Error,
+    fmt::{self},
+};
 use subscriptions::*;
+use subscriptions_confirm::confirm;
+use telemetry::RequestIdMakeSpan;
 use tower::ServiceBuilder;
 use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
 use tracing::warn;

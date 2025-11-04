@@ -487,6 +487,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "domain"
+version = "0.1.0"
+dependencies = [
+ "claims",
+ "fake",
+ "quickcheck",
+ "quickcheck_macros",
+ "sqlx",
+ "tokio",
+ "unicode-segmentation",
+ "validator",
+]
+
+[[package]]
 name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -499,6 +513,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "email-client"
+version = "0.1.0"
+dependencies = [
+ "claims",
+ "domain",
+ "fake",
+ "reqwest",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "tokio",
+ "wiremock",
 ]
 
 [[package]]
@@ -1194,15 +1223,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "linkify"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1dfa36d52c581e9ec783a7ce2a5e0143da6237be5811a0b3153fedfdbe9f780"
-dependencies = [
- "memchr",
-]
-
-[[package]]
 name = "litemap"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1806,6 +1826,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "routes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "domain",
+ "email-client",
+ "rand 0.9.2",
+ "reqwest",
+ "serde",
+ "settings",
+ "sqlx",
+ "telemetry",
+ "thiserror",
+ "tower",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
 name = "rsa"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1989,6 +2029,34 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "email-client",
+ "routes",
+ "settings",
+ "sqlx",
+ "telemetry",
+ "tokio",
+]
+
+[[package]]
+name = "settings"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "domain",
+ "dotenvy",
+ "email-client",
+ "reqwest",
+ "secrecy",
+ "serde",
+ "sqlx",
+ "tracing-log 0.2.0",
 ]
 
 [[package]]
@@ -2338,6 +2406,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "telemetry"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "tower-http",
+ "tracing",
+ "tracing-bunyan-formatter",
+ "tracing-log 0.2.0",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3334,38 +3414,6 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
-]
-
-[[package]]
-name = "z2p"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "claims",
- "config",
- "dotenvy",
- "fake",
- "linkify",
- "quickcheck",
- "quickcheck_macros",
- "rand 0.9.2",
- "reqwest",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-bunyan-formatter",
- "tracing-log 0.2.0",
- "tracing-subscriber",
- "unicode-segmentation",
- "validator",
- "wiremock",
 ]
 
 [[package]]

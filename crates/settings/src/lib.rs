@@ -1,18 +1,22 @@
-use config::Config;
-use config::{ConfigError, File};
+use std::path::PathBuf;
+
+use config::{Config, ConfigError, File};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use sqlx::postgres::PgSslMode;
 use sqlx::{ConnectOptions, PgPool, postgres::PgConnectOptions};
 
-use crate::domain::SubscriberEmail;
-use crate::email_client::EmailClient;
+use domain::SubscriberEmail;
+use email_client::EmailClient;
 
 pub fn get_configuration() -> Result<Configuration, ConfigError> {
     dotenvy::dotenv().ok();
 
-    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
-    let configuration_dir = base_path.join("configuration");
+    // let binding = std::env::current_dir().expect("Failed to determine the current directory");
+    // let base_path = binding.parent().unwrap().parent().unwrap();
+    let base_path = std::env::var("CARGO_WORKSPACE_DIR").unwrap();
+
+    let configuration_dir = PathBuf::from(base_path).join("configuration");
 
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or("local".into())

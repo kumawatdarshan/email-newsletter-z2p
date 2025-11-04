@@ -1,14 +1,11 @@
-use crate::{
-    configuration::AppState,
-    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
-    email_client::EmailClient,
-    routes::{FormatterExt, ResponseMessage},
-};
+use crate::{FormatterExt, ResponseMessage};
 use anyhow::Context;
 use axum::{Form, Json, extract::State, http::StatusCode, response::IntoResponse};
-use rand::Rng;
-use rand::distr::Alphanumeric;
+use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
+use email_client::EmailClient;
+use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
+use settings::AppState;
 use sqlx::{
     Postgres, Transaction,
     types::{Uuid, chrono::Utc},
