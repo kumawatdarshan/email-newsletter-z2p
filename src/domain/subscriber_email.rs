@@ -1,7 +1,7 @@
 use validator::ValidateEmail;
 
 // use unicode_segmentation::UnicodeSegmentation;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {

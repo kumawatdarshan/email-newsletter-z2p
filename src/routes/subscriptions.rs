@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Context;
 use axum::{Form, Json, extract::State, http::StatusCode, response::IntoResponse};
-use rand::Rng;
+use rand::{Rng, rngs::OsRng};
 use rand::distr::Alphanumeric;
 use serde::Deserialize;
 use sqlx::{
@@ -70,7 +70,9 @@ impl std::fmt::Debug for SubscribeError {
 /// - **`500 Internal Server Error`** — One of the following operations failed:
 ///   - Inserting the subscriber into the database.
 ///   - Storing the `subscription_token`.
-///   - Sending the confirmation email.
+///
+/// Note: Confirmation email is sent asynchronously in the background. Email sending
+/// failures are logged but do not affect the HTTP response.
 #[tracing::instrument(
     name = "Adding a new Subscriber",
     skip(state, form),
@@ -106,14 +108,30 @@ pub async fn subscribe(
         .await
         .context("Failed to commit SQL transaction to store a new subscriber")?;
 
-    send_confirmation_email(
-        &state.email_client,
-        new_subscriber,
-        &state.base_url,
-        &subscription_token,
-    )
-    .await
-    .context("Faield to send a confirmation mail")?;
+    // Spawn background task for email sending
+    let email_client = state.email_client.clone();
+    let base_url = state.base_url.clone();
+    let span = tracing::Span::current();
+    
+    tokio::spawn(async move {
+        let _enter = span.enter();
+        if let Err(e) = send_confirmation_email(
+            &email_client,
+            new_subscriber,
+            &base_url,
+            &subscription_token,
+        )
+        .await
+        {
+            tracing::error!(
+                error.chain = ?e,
+                error.message = %e,
+                "Failed to send confirmation email"
+            );
+        } else {
+            tracing::info!("Confirmation email sent successfully");
+        }
+    });
 
     Ok(StatusCode::CREATED)
 }
@@ -196,7 +214,7 @@ pub async fn store_token(
 }
 
 fn generate_subscription_token() -> String {
-    let mut rng = rand::rng();
+    let mut rng = OsRng;
     std::iter::repeat_with(|| rng.sample(Alphanumeric))
         .map(char::from)
         .take(25)
