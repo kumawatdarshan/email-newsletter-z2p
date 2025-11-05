@@ -5,7 +5,7 @@ use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EmailClient {
     http_client: Client,
     base_url: Url,
