@@ -8,6 +8,7 @@ sqlx.workspace = true
 tokio.workspace = true
 validator.workspace = true
 unicode-segmentation.workspace = true
+hakari-hack.workspace = true
 
 [dev-dependencies]
 claims.workspace = true

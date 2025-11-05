@@ -13,3 +13,4 @@ dotenvy.workspace = true
 tracing-log.workspace = true
 domain.workspace = true
 email-client.workspace = true
+hakari-hack.workspace = true

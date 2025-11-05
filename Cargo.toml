@@ -8,8 +8,12 @@ repository = "https://github.com/kumawatdarshan/email-newsletter-z2p"
 [workspace]
 resolver = "3"
 members = [
-  "crates/*",
+  "crates/*"
 ]
+
+[profile.dev]
+opt-level = 0
+codegen-units = 256
 
 [profile.release]
 opt-level = 3           
@@ -49,10 +53,14 @@ quickcheck = "1.0.3"
 quickcheck_macros = "1.1.0"
 serde_json = "1.0.143"
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate" ] }
+
+# Local crates
+
 settings = { path = "crates/settings" }
 telemetry = { path = "crates/telemetry" }
 email-client = { path = "crates/email-client" }
 domain = { path = "crates/domain" }
 state = { path = "crates/state" }
 routes = { path = "crates/routes" }
+hakari-hack = { path = "crates/hakari-hack" }
 

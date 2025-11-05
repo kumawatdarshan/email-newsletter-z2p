@@ -10,3 +10,4 @@ repository.workspace = true
 email-client.workspace = true
 settings.workspace = true
 sqlx.workspace = true
+hakari-hack.workspace = true

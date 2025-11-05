@@ -492,6 +492,7 @@ version = "0.1.0"
 dependencies = [
  "claims",
  "fake",
+ "hakari-hack",
  "quickcheck",
  "quickcheck_macros",
  "sqlx",
@@ -522,6 +523,7 @@ dependencies = [
  "claims",
  "domain",
  "fake",
+ "hakari-hack",
  "reqwest",
  "secrecy",
  "serde",
@@ -801,6 +803,41 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+]
+
+[[package]]
+name = "hakari-hack"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bitflags",
+ "crypto-common",
+ "digest",
+ "form_urlencoded",
+ "futures-channel",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+ "getrandom 0.3.4",
+ "hyper",
+ "hyper-util",
+ "idna",
+ "log",
+ "rand 0.8.5",
+ "regex",
+ "regex-automata",
+ "regex-syntax",
+ "serde",
+ "serde_core",
+ "sha2",
+ "smallvec",
+ "sqlx-core",
+ "sqlx-postgres",
+ "syn",
+ "sync_wrapper",
+ "tokio",
+ "tracing-core",
+ "uuid",
 ]
 
 [[package]]
@@ -1842,6 +1879,7 @@ dependencies = [
  "axum",
  "domain",
  "email-client",
+ "hakari-hack",
  "linkify",
  "rand 0.9.2",
  "reqwest",
@@ -2051,6 +2089,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "email-client",
+ "hakari-hack",
  "routes",
  "settings",
  "sqlx",
@@ -2067,6 +2106,7 @@ dependencies = [
  "domain",
  "dotenvy",
  "email-client",
+ "hakari-hack",
  "reqwest",
  "secrecy",
  "serde",
@@ -2374,6 +2414,7 @@ name = "state"
 version = "0.1.0"
 dependencies = [
  "email-client",
+ "hakari-hack",
  "settings",
  "sqlx",
 ]
@@ -2437,6 +2478,7 @@ name = "telemetry"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "hakari-hack",
  "tower-http",
  "tracing",
  "tracing-bunyan-formatter",

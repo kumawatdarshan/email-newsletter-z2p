@@ -19,6 +19,7 @@ telemetry.workspace = true
 email-client.workspace = true
 domain.workspace = true
 state.workspace = true
+hakari-hack.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

@@ -12,3 +12,4 @@ routes.workspace = true
 settings.workspace = true
 telemetry.workspace = true
 state.workspace = true
+hakari-hack.workspace = true

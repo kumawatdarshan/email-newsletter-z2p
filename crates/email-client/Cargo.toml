@@ -8,6 +8,7 @@ secrecy.workspace = true
 serde.workspace = true
 reqwest.workspace = true
 domain.workspace = true
+hakari-hack.workspace = true
 
 [dev-dependencies]
 claims.workspace = true
