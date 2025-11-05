@@ -1,0 +1,12 @@
+[package]
+name = "state"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+email-client.workspace = true
+settings.workspace = true
+sqlx.workspace = true

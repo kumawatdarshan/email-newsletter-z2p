@@ -5,11 +5,11 @@ use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use email_client::EmailClient;
 use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
-use settings::AppState;
 use sqlx::{
     Postgres, Transaction,
     types::{Uuid, chrono::Utc},
 };
+use state::AppState;
 use std::sync::Arc;
 
 #[derive(Deserialize)]

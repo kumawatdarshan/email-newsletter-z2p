@@ -1,23 +1,18 @@
-use std::path::PathBuf;
-
 use config::{Config, ConfigError, File};
+use domain::SubscriberEmail;
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use sqlx::postgres::PgSslMode;
-use sqlx::{ConnectOptions, PgPool, postgres::PgConnectOptions};
-
-use domain::SubscriberEmail;
-use email_client::EmailClient;
+use sqlx::{ConnectOptions, postgres::PgConnectOptions};
+use std::path::PathBuf;
 
 pub fn get_configuration() -> Result<Configuration, ConfigError> {
     dotenvy::dotenv().ok();
 
-    // let binding = std::env::current_dir().expect("Failed to determine the current directory");
-    // let base_path = binding.parent().unwrap().parent().unwrap();
-    let base_path = std::env::var("CARGO_WORKSPACE_DIR").unwrap();
+    // this can be compile time because we are providing from the .cargo/config.toml
+    let configuration_dir = PathBuf::from(concat!(env!("CARGO_WORKSPACE_DIR"), "/configuration"));
 
-    let configuration_dir = PathBuf::from(base_path).join("configuration");
-
+    // this can't be as it can be changed in runtime
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or("local".into())
         .try_into()
@@ -129,12 +124,4 @@ impl TryFrom<String> for Environment {
             )),
         }
     }
-}
-
-/// State needed for various services like psql, redis, etc
-#[derive(Debug)]
-pub struct AppState {
-    pub db_pool: PgPool,
-    pub email_client: EmailClient,
-    pub base_url: String,
 }

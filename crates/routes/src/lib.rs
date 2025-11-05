@@ -9,7 +9,7 @@ use axum::{
 };
 use health::*;
 use serde::Serialize;
-use settings::AppState;
+use state::AppState;
 use std::{
     error::Error,
     fmt::{self},

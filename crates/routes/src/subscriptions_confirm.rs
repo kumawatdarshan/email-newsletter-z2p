@@ -7,8 +7,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
-use settings::AppState;
 use sqlx::{PgPool, types::Uuid};
+use state::AppState;
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize)]

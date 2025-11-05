@@ -1,7 +1,7 @@
 use routes::get_router;
-use server::create_email_client;
-use settings::{AppState, get_configuration};
+use settings::get_configuration;
 use sqlx::PgPool;
+use state::{AppState, create_email_client};
 use tokio::net::TcpListener;
 
 #[tokio::main]

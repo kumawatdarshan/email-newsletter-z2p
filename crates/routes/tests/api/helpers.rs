@@ -1,15 +1,14 @@
 use reqwest::{StatusCode, Url};
-use sqlx::types::Uuid;
-use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::io::Result;
+use routes::get_router;
+use settings::{DatabaseConfiguration, get_configuration};
+use sqlx::{Connection, Executor, PgConnection, PgPool, migrate::Migrator, types::Uuid};
+use state::{AppState, create_email_client};
+use std::{io::Result, path::PathBuf};
+use telemetry::init_tracing;
 use tokio::net::TcpListener;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
-use z2p::app_state::{create_email_client, init_tracing};
-use z2p::configuration::get_configuration;
-use z2p::{
-    configuration::{AppState, DatabaseConfiguration},
-    routes::get_router,
+use wiremock::{
+    Mock, MockServer, ResponseTemplate,
+    matchers::{method, path},
 };
 
 /// Only for integration tests.
@@ -90,7 +89,13 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
         .await
         .expect("Failed to connect to Postgres.");
 
-    sqlx::migrate!("./migrations")
+    let migrations_dir = PathBuf::from(concat!(env!("CARGO_WORKSPACE_DIR"), "/migrations"));
+
+    let migrator = Migrator::new(migrations_dir)
+        .await
+        .expect("Failed to load migrations");
+
+    migrator
         .run(&connection_pool)
         .await
         .expect("Failed to migrate the database");
