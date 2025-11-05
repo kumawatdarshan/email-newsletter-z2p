@@ -72,7 +72,8 @@ async fn subscribe_sends_a_confirmation_link_for_valid_data() {
 
     app.post_subscriptions(body).await;
 
-    let email_request = app.wait_for_email_request().await;
+    let email_request = app.wait_for_email_request().await
+        .expect("Failed to receive email request");
     let confirmation_links = app.retrieve_links(&email_request);
 
     assert_eq!(confirmation_links.html, confirmation_links.plaintext);

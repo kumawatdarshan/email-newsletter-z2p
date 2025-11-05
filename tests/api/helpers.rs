@@ -76,8 +76,8 @@ impl TestApp {
 
     /// Wait for an email request to be received, polling with retries.
     /// Returns the first received request when available.
-    /// Panics with a helpful error message if timeout is reached.
-    pub async fn wait_for_email_request(&self) -> wiremock::Request {
+    /// Returns an error if timeout is reached.
+    pub async fn wait_for_email_request(&self) -> Result<wiremock::Request, String> {
         let timeout = std::time::Duration::from_secs(5);
         let poll_interval = std::time::Duration::from_millis(50);
         let start = std::time::Instant::now();
@@ -88,16 +88,20 @@ impl TestApp {
         loop {
             if let Ok(requests) = self.email_server.received_requests().await {
                 if !requests.is_empty() {
-                    return requests[0].clone();
+                    return Ok(requests[0].clone());
                 }
             }
 
             if start.elapsed() >= timeout {
-                panic!(
+                tracing::warn!(
                     "Timeout waiting for email request after {:?}. \
                     Email may not have been sent in background task.",
                     timeout
                 );
+                return Err(format!(
+                    "Timeout waiting for email request after {:?}",
+                    timeout
+                ));
             }
 
             tokio::time::sleep(poll_interval).await;
