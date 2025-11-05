@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Context;
 use axum::{Form, Json, extract::State, http::StatusCode, response::IntoResponse};
-use rand::{Rng, rngs::OsRng};
+use rand::Rng;
 use rand::distr::Alphanumeric;
 use serde::Deserialize;
 use sqlx::{
@@ -214,7 +214,7 @@ pub async fn store_token(
 }
 
 fn generate_subscription_token() -> String {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     std::iter::repeat_with(|| rng.sample(Alphanumeric))
         .map(char::from)
         .take(25)
