@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use email_client::EmailClient;
+use sqlx::PgPool;
 
 use settings::Configuration;
 
