@@ -20,8 +20,8 @@ async fn link_returned_by_subscribe_returns_a_200() {
     app.mock_mail_server(StatusCode::OK).await;
     app.post_subscriptions(body).await;
 
-    let email_request = &app.email_server.received_requests().await.unwrap()[0];
-    let confirmation_links = app.retrieve_links(email_request);
+    let email_request = app.wait_for_email_request().await;
+    let confirmation_links = app.retrieve_links(&email_request);
 
     let response = reqwest::get(confirmation_links.html).await.unwrap();
 
@@ -35,8 +35,8 @@ async fn clicking_on_confirmation_link_confirms_subscription() {
 
     app.mock_mail_server(StatusCode::OK).await;
     app.post_subscriptions(body).await;
-    let email_request = &app.email_server.received_requests().await.unwrap()[0];
-    let confirmation_links = app.retrieve_links(email_request);
+    let email_request = app.wait_for_email_request().await;
+    let confirmation_links = app.retrieve_links(&email_request);
 
     reqwest::get(confirmation_links.html)
         .await

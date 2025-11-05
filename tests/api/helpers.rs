@@ -73,6 +73,36 @@ impl TestApp {
             .mount(&self.email_server)
             .await
     }
+
+    /// Wait for an email request to be received, polling with retries.
+    /// Returns the first received request when available.
+    /// Panics with a helpful error message if timeout is reached.
+    pub async fn wait_for_email_request(&self) -> wiremock::Request {
+        let timeout = std::time::Duration::from_secs(5);
+        let poll_interval = std::time::Duration::from_millis(50);
+        let start = std::time::Instant::now();
+
+        // Initial small delay to allow background task to start
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+
+        loop {
+            if let Ok(requests) = self.email_server.received_requests().await {
+                if !requests.is_empty() {
+                    return requests[0].clone();
+                }
+            }
+
+            if start.elapsed() >= timeout {
+                panic!(
+                    "Timeout waiting for email request after {:?}. \
+                    Email may not have been sent in background task.",
+                    timeout
+                );
+            }
+
+            tokio::time::sleep(poll_interval).await;
+        }
+    }
 }
 
 /// Creating a uuid named db through `PgConnection` and then doing the migrations through `PgPool`
