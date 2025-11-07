@@ -36,6 +36,7 @@ in {
       just
       curlie
       cargo-watch
+      cargo-hakari
       cargo-expand
       bunyan-rs
     ];

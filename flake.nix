@@ -14,10 +14,12 @@
     };
   };
 
-  outputs = inputs: let
-    inherit (inputs) nixpkgs fenix flake-utils crane;
+  outputs = { self, nixpkgs, fenix, flake-utils, crane, process-compose-flake, services-flake, ... }: let
+
     config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
-    meta = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package;
+    meta = ((builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package) // {
+      pname = "server";
+    };
   in
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [fenix.overlays.default];
@@ -37,17 +39,18 @@
       };
 
       # runtime deps
-      buildInputs = [ ];
+      buildInputs = [];
       # Build deps
       nativeBuildInputs = with pkgs; [
         sqlx-cli
         mold
+        sccache
       ];
       commonArgs = {
         inherit src buildInputs nativeBuildInputs;
         strictDeps = true;
+        SCCACHE_DIR = "/tmp/sccache"; # not using docker for dev, fine with cache miss.
       };
-
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
     in {
       packages = import ./nix/packages.nix {
@@ -61,7 +64,7 @@
       devShells = import ./nix/devshell.nix {
         inherit config pkgs;
         inherit (commonArgs) buildInputs nativeBuildInputs;
-        inherit (inputs) process-compose-flake services-flake;
+        inherit process-compose-flake services-flake;
       };
     });
 }

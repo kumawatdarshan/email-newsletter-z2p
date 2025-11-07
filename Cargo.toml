@@ -4,6 +4,7 @@ authors = ["Darshan Kumawat <mail@darshan.qzz.io>"]
 edition = "2024"
 categories = ["api", "email", "newsletter"]
 repository = "https://github.com/kumawatdarshan/email-newsletter-z2p"
+pname = "email-newsletter"
 
 [workspace]
 resolver = "3"
