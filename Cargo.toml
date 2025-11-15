@@ -3,7 +3,7 @@ name = "email-newsletter-api"
 version = "0.1.0"
 
 [workspace.package]
-version = "0.1.0" # need to figure out how to make it DRY
+version = "0.1.0"                                                     # need to figure out how to make it DRY
 authors = ["Darshan Kumawat <mail@darshan.qzz.io>"]
 edition = "2024"
 categories = ["api", "email", "newsletter"]
@@ -11,21 +11,19 @@ repository = "https://github.com/kumawatdarshan/email-newsletter-z2p"
 
 [workspace]
 resolver = "3"
-members = [
-  "crates/*"
-]
+members = ["crates/*"]
 
 [profile.dev]
 opt-level = 0
 codegen-units = 256
 
 [profile.release]
-opt-level = 3           
-lto = "thin"             
-codegen-units = 1       
-strip = true            
-panic = "abort"         
-debug = false           
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
+debug = false
 
 [workspace.dependencies]
 axum = { version = "0.8.4", features = ["macros"] }
@@ -34,18 +32,24 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.46.0", features = ["rt-multi-thread"] }
 tower = { version = "0.5.2" }
 tower-http = { version = "0.6.6", features = ["trace", "request-id", "util"] }
-rand = { version = "0.9.2", features=["std_rng"] }
+rand = { version = "0.9.2", features = ["std_rng"] }
 
 # Tracing 
 tracing = { version = "0.1.41", features = ["log"] }
-tracing-subscriber = { version = "0.3.19", features = ["registry", "env-filter"] }
+tracing-subscriber = { version = "0.3.19", features = [
+  "registry",
+  "env-filter",
+] }
 tracing-bunyan-formatter = "0.3.10"
 tracing-log = "0.2.0"
 
 validator = { version = "0.20.0", features = ["derive"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
 unicode-segmentation = "1.12.0"
-reqwest = { version = "0.12.22", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12.22", features = [
+  "json",
+  "rustls-tls",
+], default-features = false }
 wiremock = "0.6.5"
 dotenvy = "0.15.7"
 linkify = "0.10.0"
@@ -56,7 +60,14 @@ fake = "4.3.0"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.1.0"
 serde_json = "1.0.143"
-sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate" ] }
+sqlx = { version = "0.8.6", default-features = false, features = [
+  "runtime-tokio-rustls",
+  "macros",
+  "postgres",
+  "uuid",
+  "chrono",
+  "migrate",
+] }
 
 # Local crates
 
@@ -67,4 +78,3 @@ domain = { path = "crates/domain" }
 state = { path = "crates/state" }
 routes = { path = "crates/routes" }
 hakari-hack = { path = "crates/hakari-hack" }
-

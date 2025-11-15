@@ -1,9 +1,9 @@
 {
-	"application": {
-		"host": "127.0.0.1",
-		"base_url": "127.0.0.1"
-	},
-	"email_client": {
-		"timeout_ms": 1000
-	}
+  "application": {
+    "host": "127.0.0.1",
+    "base_url": "127.0.0.1"
+  },
+  "email_client": {
+    "timeout_ms": 1000
+  }
 }
