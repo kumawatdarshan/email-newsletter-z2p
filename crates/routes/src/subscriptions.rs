@@ -13,9 +13,9 @@ use state::AppState;
 use std::sync::Arc;
 
 #[derive(Deserialize)]
-pub struct FormData {
-    pub email: String,
-    pub name: String,
+pub(crate) struct FormData {
+    email: String,
+    name: String,
 }
 
 impl TryFrom<FormData> for NewSubscriber {
@@ -76,7 +76,7 @@ impl std::fmt::Debug for SubscribeError {
         subscriber_name = %form.name,
     )
 )]
-pub async fn subscribe(
+pub(crate) async fn subscribe(
     State(state): State<Arc<AppState>>,
     Form(form): Form<FormData>,
 ) -> Result<StatusCode, SubscribeError> {
@@ -144,7 +144,7 @@ async fn insert_subscriber(
     name = "Sending Confirmation mail",
     skip(email_client, new_subscriber, base_url, subscription_token)
 )]
-pub async fn send_confirmation_email(
+async fn send_confirmation_email(
     email_client: &EmailClient,
     new_subscriber: NewSubscriber,
     base_url: &str,
@@ -173,7 +173,7 @@ pub async fn send_confirmation_email(
     name = "Store subscription token in the database",
     skip(subscription_token, transaction)
 )]
-pub async fn store_token(
+async fn store_token(
     transaction: &mut Transaction<'_, Postgres>,
     subscriber_id: Uuid,
     subscription_token: &str,

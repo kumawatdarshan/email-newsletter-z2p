@@ -72,6 +72,13 @@ impl TestApp {
             .mount(&self.email_server)
             .await
     }
+
+    pub(crate) fn get_confirmation_links(
+        &self,
+        email_request: &wiremock::Request,
+    ) -> ConfirmationLinks {
+        todo!()
+    }
 }
 
 /// Creating a uuid named db through `PgConnection` and then doing the migrations through `PgPool`

@@ -12,8 +12,8 @@ use state::AppState;
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize)]
-pub struct Parameters {
-    pub subscription_token: String,
+pub(crate) struct Parameters {
+    subscription_token: String,
 }
 
 #[derive(thiserror::Error)]
@@ -45,7 +45,7 @@ impl std::fmt::Debug for ConfirmationError {
 }
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(parameters))]
-pub async fn confirm(
+pub(crate) async fn confirm(
     State(state): State<Arc<AppState>>,
     Query(parameters): Query<Parameters>,
 ) -> Result<impl IntoResponse, ConfirmationError> {
@@ -69,7 +69,7 @@ pub async fn confirm(
 }
 
 #[tracing::instrument(name = "Mark subscriber as Confirmed", skip(subscriber_id, pool))]
-pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<bool, sqlx::Error> {
+async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<bool, sqlx::Error> {
     // TODO: ADD TIMESTAMP in schema TO AUTOMATICALLY invalidate token after 24h
     let result = sqlx::query!(
         r#"UPDATE subscriptions SET status = 'confirmed'
@@ -96,7 +96,7 @@ pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<bo
 }
 
 #[tracing::instrument(name = "Get subscriber_id from token", skip(subscription_token, pool))]
-pub async fn get_subscriber_id_from_token(
+async fn get_subscriber_id_from_token(
     pool: &PgPool,
     subscription_token: &str,
 ) -> Result<Option<Uuid>, sqlx::Error> {
