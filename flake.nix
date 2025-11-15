@@ -5,6 +5,10 @@
     flake-utils.url = "github:numtide/flake-utils";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,19 +18,27 @@
     };
   };
 
-  outputs = { self, nixpkgs, fenix, flake-utils, crane, process-compose-flake, services-flake, ... }: let
-
+  outputs = {
+    self,
+    nixpkgs,
+    fenix,
+    flake-utils,
+    crane,
+    process-compose-flake,
+    services-flake,
+    git-hooks,
+    ...
+  }: let
     config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
-    meta = ((builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package) // {
-      pname = "server";
-    };
+meta =
+        (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.metadata.crane;
   in
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [fenix.overlays.default];
       pkgs = import nixpkgs {
         inherit system overlays;
       };
-      craneLib = (crane.mkLib pkgs);
+      craneLib = crane.mkLib pkgs;
 
       src = pkgs.lib.fileset.toSource {
         root = ./.;
@@ -57,9 +69,18 @@
         inherit meta pkgs craneLib commonArgs cargoArtifacts;
       };
 
-      checks = import ./nix/checks.nix {
-        inherit craneLib commonArgs cargoArtifacts;
-      };
+      checks = let
+        git-hooks-bin = git-hooks.lib.${system};
+      in
+        import ./nix/checks.nix {
+          inherit
+            craneLib
+            commonArgs
+            cargoArtifacts
+            git-hooks-bin
+            self
+            ;
+        };
 
       devShells = import ./nix/devshell.nix {
         inherit config pkgs;

@@ -1,5 +1,9 @@
-[workspace.package]
+[workspace.metadata.crane]
+name = "email-newsletter-api"
 version = "0.1.0"
+
+[workspace.package]
+version = "0.1.0" # need to figure out how to make it DRY
 authors = ["Darshan Kumawat <mail@darshan.qzz.io>"]
 edition = "2024"
 categories = ["api", "email", "newsletter"]

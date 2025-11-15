@@ -5,14 +5,10 @@
   commonArgs,
   cargoArtifacts,
 }: let
-  inherit (meta) version pname;
+  inherit (meta) version name;
+  pname = name;
 in rec {
   # YOU NEED TO RUN `cargo sqlx prepare -- --release` FOR THIS
-  debug = pkgs.writeShellScript "debug"  ''
-    echo "CARGO_WORKSPACE_DIR would be: ${commonArgs.src}"
-    touch $out
-  '';
-
   default = craneLib.buildPackage (commonArgs
     // {
       inherit version cargoArtifacts pname;
@@ -38,11 +34,11 @@ in rec {
     runtime = pkgs.linkFarm "config" runtimeDirs;
   in
     pkgs.dockerTools.buildLayeredImage {
-      name = "server";
+      inherit name;
       tag = "latest";
       contents = [runtime];
       config = {
-        Entrypoint = [ bin ];
+        Entrypoint = [bin];
         ExposedPorts."8000/tcp" = {};
       };
     };
