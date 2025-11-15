@@ -20,6 +20,9 @@ test-subcribe:
 test:
     SQLX_OFFLINE=false cargo test
 
+check:
+    SQLX_OFFLINE=false cargo check
+
 migrate:
     sqlx migrate run
 
