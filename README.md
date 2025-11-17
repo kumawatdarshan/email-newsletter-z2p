@@ -1,7 +1,22 @@
-# Things Different from Original Book
+# My learnings and some notes
 
 ## Tech Stack Differences
 - Using **Axum** instead of `actix-web`.
+- Sqlite since commit `b7fd3db`.
+  - Migration was an experience...
+  - I had never used sqlite, I wasn't aware the migration would prove to be this much work.
+  - For example, the types: uuid, timestampz dont exist in sqlite.
+  - But the biggest problem was actually caused by `20251025083651_make_status_not_null_in_subscriptions.sql`
+    - Sqlite doesn't support nested txn.
+    - Sqlite has an extremely limited `ALTER TABLE` support.
+    - Only way I could find to hack it in is to *recreate* the table.
+  - That sounds ridiculous for a system in production. Absolutely never change your db midway. 
+  - Damm the problems didn't end at just queries. Bigger headache turned out to be how to handle tests.
+    - Creating new `.db` is easy way out but thats just messy.
+    - AsyncDrop trait is not yet here to do delete file afterwards.
+    - In memory db has its own set of problems with it being not shared across the entire test.
+      - Shared memory is an option which I ended up using. There are some caveats to it, I hope I don't run into them
+
 - Using **Nix flakes** for the entirety of the deployment pipeline.
   - Also Integrating Nix into Github Actions.
 

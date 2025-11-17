@@ -1,10 +1,11 @@
 use config::{Config, ConfigError, File};
 use domain::SubscriberEmail;
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::SecretString;
 use serde::Deserialize;
-use sqlx::postgres::PgSslMode;
-use sqlx::{ConnectOptions, postgres::PgConnectOptions};
+use sqlx::ConnectOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 pub fn get_configuration() -> Result<Configuration, ConfigError> {
     dotenvy::dotenv().ok();
@@ -51,12 +52,8 @@ pub struct ApplicationConfiguration {
 
 #[derive(Deserialize, Debug)]
 pub struct DatabaseConfiguration {
-    pub username: String,
-    pub password: SecretString,
-    pub host: String,
-    pub port: Port,
+    pub url: String,
     pub name: String,
-    pub require_ssl: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -77,23 +74,12 @@ impl EmailClientConfiguration {
 }
 
 impl DatabaseConfiguration {
-    pub fn without_db(&self) -> PgConnectOptions {
-        let ssl = if self.require_ssl {
-            PgSslMode::Require
-        } else {
-            PgSslMode::Prefer
-        };
-        PgConnectOptions::new()
-            .host(&self.host)
-            .username(&self.username)
-            .password(self.password.expose_secret())
-            .port(self.port)
-            .ssl_mode(ssl)
-    }
-
-    pub fn with_db(&self) -> PgConnectOptions {
-        self.without_db()
-            .database(&self.name)
+    pub fn options(&self) -> SqliteConnectOptions {
+        SqliteConnectOptions::from_str(&self.url)
+            .expect("Invalid SQLite path")
+            .create_if_missing(true)
+            .journal_mode(SqliteJournalMode::Wal)
+            .synchronous(SqliteSynchronous::Normal)
             .log_statements(tracing_log::log::LevelFilter::Trace)
     }
 }

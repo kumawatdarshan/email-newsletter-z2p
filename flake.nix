@@ -24,12 +24,9 @@
     fenix,
     flake-utils,
     crane,
-    process-compose-flake,
-    services-flake,
     treefmt-nix,
     ...
   }: let
-    config = builtins.fromJSON (builtins.readFile ./configuration/base.json);
     meta =
       (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.metadata.crane;
   in
@@ -79,6 +76,7 @@
       formatter = treefmt.config.build.wrapper;
     in {
       inherit formatter;
+
       packages = import ./nix/packages.nix {
         inherit meta pkgs craneLib commonArgs cargoArtifacts;
       };
@@ -93,9 +91,8 @@
       };
 
       devShells = import ./nix/devshell.nix {
-        inherit config pkgs;
+        inherit pkgs;
         inherit (commonArgs) buildInputs nativeBuildInputs;
-        inherit process-compose-flake services-flake;
       };
     });
 }

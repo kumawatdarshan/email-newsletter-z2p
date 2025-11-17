@@ -1,7 +1,7 @@
 use reqwest::{StatusCode, Url};
 use routes::get_router;
 use settings::{DatabaseConfiguration, get_configuration};
-use sqlx::{Connection, Executor, PgConnection, PgPool, migrate::Migrator, types::Uuid};
+use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions};
 use state::{AppState, create_email_client};
 use std::{io::Result, path::PathBuf};
 use telemetry::init_tracing;
@@ -15,7 +15,7 @@ use wiremock::{
 #[derive(Debug)]
 pub struct TestApp {
     pub address: String,
-    pub db_pool: PgPool,
+    pub db_pool: SqlitePool,
     pub email_server: MockServer,
     pub api_client: reqwest::Client,
 }
@@ -75,26 +75,18 @@ impl TestApp {
 
     pub(crate) fn get_confirmation_links(
         &self,
-        email_request: &wiremock::Request,
+        _email_request: &wiremock::Request,
     ) -> ConfirmationLinks {
         todo!()
     }
 }
 
 /// Creating a uuid named db through `PgConnection` and then doing the migrations through `PgPool`
-async fn configure_test_database(settings: &DatabaseConfiguration) -> PgPool {
-    let mut connection = PgConnection::connect_with(&settings.without_db())
+async fn configure_test_database(settings: &DatabaseConfiguration) -> SqlitePool {
+    let connection_pool = SqlitePoolOptions::new()
+        .connect_with(settings.options().shared_cache(true))
         .await
-        .expect("Failed to connect to Postgres.");
-
-    connection
-        .execute(format!(r#"CREATE DATABASE "{}""#, settings.name).as_str())
-        .await
-        .expect("Failed to create database.");
-
-    let connection_pool = PgPool::connect_with(settings.with_db())
-        .await
-        .expect("Failed to connect to Postgres.");
+        .unwrap();
 
     let migrations_dir = PathBuf::from(concat!(env!("CARGO_WORKSPACE_DIR"), "/migrations"));
 
@@ -124,7 +116,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         let mut c = get_configuration().expect("Failed to read Configuration");
         let email_client_url = reqwest::Url::parse(&email_server.uri())
             .map_err(|_| std::io::ErrorKind::InvalidInput)?;
-        c.database.name = Uuid::new_v4().to_string();
+        c.database.url = "sqlite::memory:".to_owned();
         c.email_client.base_url = email_client_url;
         // randomized OS port
         c.application.port = 0;

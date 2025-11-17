@@ -6,7 +6,7 @@ use email_client::EmailClient;
 use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
 use sqlx::{
-    Postgres, Transaction,
+    Sqlite, Transaction,
     types::{Uuid, chrono::Utc},
 };
 use state::AppState;
@@ -120,19 +120,23 @@ pub(crate) async fn subscribe(
     skip(transaction, new_subscriber)
 )]
 async fn insert_subscriber(
-    transaction: &mut Transaction<'_, Postgres>,
+    transaction: &mut Transaction<'_, Sqlite>,
     new_subscriber: &NewSubscriber,
-) -> Result<Uuid, sqlx::Error> {
-    let subscriber_id = Uuid::new_v4();
+) -> Result<String, sqlx::Error> {
+    let subscriber_id = Uuid::new_v4().to_string();
+    let email = new_subscriber.email.as_ref();
+    let name = new_subscriber.name.as_ref();
+    let timestamp = Utc::now().to_string();
+
     sqlx::query!(
         r#"
             INSERT INTO subscriptions (id, email,name, subscribed_at, status)
             VALUES ($1,$2,$3,$4, 'pending_confirmation')
         "#,
         subscriber_id,
-        new_subscriber.email.as_ref(),
-        new_subscriber.name.as_ref(),
-        Utc::now()
+        email,
+        name,
+        timestamp
     )
     .execute(&mut **transaction)
     .await?;
@@ -174,8 +178,8 @@ async fn send_confirmation_email(
     skip(subscription_token, transaction)
 )]
 async fn store_token(
-    transaction: &mut Transaction<'_, Postgres>,
-    subscriber_id: Uuid,
+    transaction: &mut Transaction<'_, Sqlite>,
+    subscriber_id: String,
     subscription_token: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(

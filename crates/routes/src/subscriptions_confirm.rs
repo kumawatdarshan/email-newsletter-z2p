@@ -7,7 +7,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
-use sqlx::{PgPool, types::Uuid};
+use sqlx::SqlitePool;
 use state::AppState;
 use std::sync::Arc;
 
@@ -69,7 +69,7 @@ pub(crate) async fn confirm(
 }
 
 #[tracing::instrument(name = "Mark subscriber as Confirmed", skip(subscriber_id, pool))]
-async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<bool, sqlx::Error> {
+async fn confirm_subscriber(pool: &SqlitePool, subscriber_id: String) -> Result<bool, sqlx::Error> {
     // TODO: ADD TIMESTAMP in schema TO AUTOMATICALLY invalidate token after 24h
     let result = sqlx::query!(
         r#"UPDATE subscriptions SET status = 'confirmed'
@@ -97,9 +97,9 @@ async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<bool, 
 
 #[tracing::instrument(name = "Get subscriber_id from token", skip(subscription_token, pool))]
 async fn get_subscriber_id_from_token(
-    pool: &PgPool,
+    pool: &SqlitePool,
     subscription_token: &str,
-) -> Result<Option<Uuid>, sqlx::Error> {
+) -> Result<Option<String>, sqlx::Error> {
     let result = sqlx::query!(
         r#"SELECT subscriber_id FROM subscription_tokens
            WHERE subscription_token = $1"#,

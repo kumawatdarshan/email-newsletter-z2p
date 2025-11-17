@@ -1,6 +1,6 @@
 use routes::get_router;
 use settings::get_configuration;
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use state::{AppState, create_email_client};
 use tokio::net::TcpListener;
 
@@ -12,7 +12,7 @@ async fn main() -> std::io::Result<()> {
     let base_url = format!("{}:{}", config.application.host, config.application.port);
     let listener = TcpListener::bind(&base_url).await?;
 
-    let pool = PgPool::connect_lazy_with(config.database.with_db());
+    let pool = SqlitePool::connect_lazy_with(config.database.options());
 
     let email_client = create_email_client(&config);
 

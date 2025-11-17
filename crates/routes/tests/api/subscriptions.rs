@@ -84,7 +84,7 @@ async fn subscribe_fails_if_there_is_fatal_db_error() {
     let body = app.fake_body();
 
     // Sabotaging the db
-    sqlx::query!("ALTER TABLE subscription_tokens DROP COLUMN subscription_token")
+    sqlx::query!("DROP TABLE subscription_tokens")
         .execute(&app.db_pool)
         .await
         .unwrap();

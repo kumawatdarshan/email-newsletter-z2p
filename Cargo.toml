@@ -63,7 +63,7 @@ serde_json = "1.0.143"
 sqlx = { version = "0.8.6", default-features = false, features = [
   "runtime-tokio-rustls",
   "macros",
-  "postgres",
+  "sqlite",
   "uuid",
   "chrono",
   "migrate",
