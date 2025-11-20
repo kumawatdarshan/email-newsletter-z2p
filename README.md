@@ -16,6 +16,7 @@
     - AsyncDrop trait is not yet here to do delete file afterwards.
     - In memory db has its own set of problems with it being not shared across the entire test.
       - Shared memory is an option which I ended up using. There are some caveats to it, I hope I don't run into them
+  - I could have created a trait based dependency injection but I wanted to see how feasible it is to fully migrate. Plus that would have taken more time when my goal was to minimize the overhead of running tests
 
 - Using **Nix flakes** for the entirety of the deployment pipeline.
   - Also Integrating Nix into Github Actions.
