@@ -1,4 +1,3 @@
-use crate::{FormatterExt, ResponseMessage};
 use anyhow::Context;
 use axum::{
     Json,
@@ -10,6 +9,8 @@ use serde::Deserialize;
 use sqlx::SqlitePool;
 use state::AppState;
 use std::sync::Arc;
+
+use crate::{ResponseMessage, error::write_error_chain};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Parameters {
@@ -40,7 +41,7 @@ impl IntoResponse for ConfirmationError {
 
 impl std::fmt::Debug for ConfirmationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_error_chain(self)
+        write_error_chain(f, self)
     }
 }
 

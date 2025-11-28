@@ -1,15 +1,12 @@
-pub mod health;
-pub mod newsletters;
-pub mod routes;
-pub mod subscriptions;
-pub mod subscriptions_confirm;
+pub(crate) mod error;
+pub(crate) mod health;
+pub(crate) mod newsletters;
+pub(crate) mod routes;
+pub(crate) mod subscriptions;
+pub(crate) mod subscriptions_confirm;
 
 use axum::http::{StatusCode, Uri};
 use serde::Serialize;
-use std::{
-    error::Error,
-    fmt::{self},
-};
 use tracing::warn;
 
 // re-exports
@@ -22,25 +19,6 @@ async fn handle_404(uri: Uri) -> StatusCode {
 }
 
 #[derive(Serialize)]
-pub struct ResponseMessage {
+pub(crate) struct ResponseMessage {
     message: String,
-}
-
-pub trait FormatterExt {
-    fn write_error_chain(&mut self, e: &impl Error) -> fmt::Result;
-}
-
-impl FormatterExt for fmt::Formatter<'_> {
-    fn write_error_chain(&mut self, e: &impl Error) -> fmt::Result {
-        writeln!(self, "{e}")?;
-        let mut cause = e.source();
-        let mut depth = 1;
-
-        while let Some(err) = cause {
-            writeln!(self, "{:>width$}+ {err}", "", width = depth * 2)?;
-            cause = err.source();
-            depth += 1;
-        }
-        Ok(())
-    }
 }

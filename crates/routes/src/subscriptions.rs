@@ -1,4 +1,3 @@
-use crate::{FormatterExt, ResponseMessage};
 use anyhow::Context;
 use axum::{Form, Json, extract::State, http::StatusCode, response::IntoResponse};
 use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
@@ -11,6 +10,8 @@ use sqlx::{
 };
 use state::AppState;
 use std::sync::Arc;
+
+use crate::{ResponseMessage, error::write_error_chain};
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {
@@ -54,7 +55,7 @@ impl IntoResponse for SubscribeError {
 
 impl std::fmt::Debug for SubscribeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_error_chain(self)
+        write_error_chain(f, self)
     }
 }
 
