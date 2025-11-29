@@ -1,4 +1,3 @@
-pub(crate) mod error;
 pub(crate) mod health;
 pub(crate) mod newsletters;
 pub(crate) mod routes;

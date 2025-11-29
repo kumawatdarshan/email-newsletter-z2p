@@ -27,7 +27,7 @@ pub struct ConfirmationLinks {
 }
 
 impl TestApp {
-    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+    pub(crate) async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
         reqwest::Client::new()
             .post(format!("{}/newsletters", &self.address))
             .json(&body)
@@ -35,7 +35,7 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
-    pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
+    pub(crate) async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
             .post(format!("{}/subscribe", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -46,7 +46,7 @@ impl TestApp {
     }
 
     /// retrieve links from an email using `linkify`
-    pub fn retrieve_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
+    pub(crate) fn retrieve_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
         let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
 
         let get_link = |s: &str| {
@@ -69,23 +69,16 @@ impl TestApp {
         ConfirmationLinks { html, plaintext }
     }
 
-    pub fn fake_body(&self) -> String {
+    pub(crate) fn fake_body(&self) -> String {
         "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
     }
 
-    pub async fn mock_mail_server(&self, status_code: StatusCode) {
+    pub(crate) async fn mock_mail_server(&self, status_code: StatusCode) {
         Mock::given(path("/email"))
             .and(method("POST"))
             .respond_with(ResponseTemplate::new(status_code))
             .mount(&self.email_server)
             .await
-    }
-
-    pub(crate) fn get_confirmation_links(
-        &self,
-        _email_request: &wiremock::Request,
-    ) -> ConfirmationLinks {
-        todo!()
     }
 }
 

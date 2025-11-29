@@ -28,7 +28,7 @@ pub enum ConfirmationError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
-#[tracing::instrument(name = "Confirm a pending subscriber", skip(parameters))]
+#[tracing::instrument(name = "Confirm a pending subscriber", skip(state, parameters))]
 pub(crate) async fn confirm(
     State(state): State<Arc<AppState>>,
     Query(parameters): Query<Parameters>,
@@ -79,7 +79,7 @@ async fn confirm_subscriber(pool: &SqlitePool, subscriber_id: String) -> Result<
     Ok(was_updated)
 }
 
-#[tracing::instrument(name = "Get subscriber_id from token", skip(subscription_token, pool))]
+#[tracing::instrument(name = "Get subscriber_id from token", skip(pool, subscription_token))]
 async fn get_subscriber_id_from_token(
     pool: &SqlitePool,
     subscription_token: &str,
