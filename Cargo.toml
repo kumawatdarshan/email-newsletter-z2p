@@ -78,3 +78,4 @@ domain = { path = "crates/domain" }
 state = { path = "crates/state" }
 routes = { path = "crates/routes" }
 hakari-hack = { path = "crates/hakari-hack" }
+newsletter-macros = { path = "crates/newsletter-macros" }

@@ -1,0 +1,10 @@
+[package]
+name = "newsletter-macros"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+axum-error-helper = { path = "./axum-error-helper" }

@@ -4,6 +4,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use newsletter_macros::{DebugChain, IntoErrorResponse};
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use state::AppState;
@@ -27,33 +28,13 @@ struct ConfirmedSubscriber {
     email: String,
 }
 
-#[derive(thiserror::Error)]
+#[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum PublishError {
     #[error(transparent)]
+    #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
 }
 
-impl std::fmt::Debug for PublishError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write_error_chain(f, self)
-    }
-}
-
-impl IntoResponse for PublishError {
-    fn into_response(self) -> axum::response::Response {
-        tracing::error!(exception.details = ?self, exception.message = %self);
-
-        let status_code = match &self {
-            PublishError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        let message = self.to_string();
-
-        (status_code, Json(ResponseMessage { message })).into_response()
-    }
-}
-
-#[axum::debug_handler]
 pub(crate) async fn publish_newsletter(
     State(state): State<Arc<AppState>>,
     Json(body): Json<BodyData>,

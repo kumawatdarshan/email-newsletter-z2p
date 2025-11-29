@@ -1,7 +1,8 @@
 use anyhow::Context;
-use axum::{Form, Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{Form, extract::State, http::StatusCode};
 use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use email_client::EmailClient;
+use newsletter_macros::{DebugChain, IntoErrorResponse};
 use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
 use sqlx::{
@@ -10,8 +11,6 @@ use sqlx::{
 };
 use state::AppState;
 use std::sync::Arc;
-
-use crate::{ResponseMessage, error::write_error_chain};
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {
@@ -30,33 +29,14 @@ impl TryFrom<FormData> for NewSubscriber {
     }
 }
 
-#[derive(thiserror::Error)]
+#[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum SubscribeError {
     #[error("{0}")]
+    #[status(StatusCode::UNPROCESSABLE_ENTITY)]
     ValidationError(String),
     #[error(transparent)]
+    #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
-}
-
-impl IntoResponse for SubscribeError {
-    fn into_response(self) -> axum::response::Response {
-        tracing::error!(exception.details = ?self, exception.message = %self);
-
-        let status_code = match self {
-            Self::ValidationError(_) => StatusCode::UNPROCESSABLE_ENTITY,
-            Self::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        let message = self.to_string();
-
-        (status_code, Json(ResponseMessage { message })).into_response()
-    }
-}
-
-impl std::fmt::Debug for SubscribeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write_error_chain(f, self)
-    }
 }
 
 /// Handles new subscription requests.

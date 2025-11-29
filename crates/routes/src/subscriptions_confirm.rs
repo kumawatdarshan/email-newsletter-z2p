@@ -3,46 +3,29 @@ use axum::{
     Json,
     extract::{Query, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::IntoResponse,
 };
+use newsletter_macros::{DebugChain, IntoErrorResponse};
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use state::AppState;
 use std::sync::Arc;
 
-use crate::{ResponseMessage, error::write_error_chain};
+use crate::ResponseMessage;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Parameters {
     subscription_token: String,
 }
 
-#[derive(thiserror::Error)]
+#[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum ConfirmationError {
     #[error("The confirmation token is invalid or has expired")]
+    #[status(StatusCode::UNAUTHORIZED)]
     InvalidToken,
     #[error(transparent)]
+    #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
-}
-
-impl IntoResponse for ConfirmationError {
-    fn into_response(self) -> Response {
-        tracing::error!(exception.details = ?self, exception.message = %self);
-        let status_code = match self {
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
-            Self::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        let message = self.to_string();
-
-        (status_code, Json(ResponseMessage { message })).into_response()
-    }
-}
-
-impl std::fmt::Debug for ConfirmationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write_error_chain(f, self)
-    }
 }
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(parameters))]
