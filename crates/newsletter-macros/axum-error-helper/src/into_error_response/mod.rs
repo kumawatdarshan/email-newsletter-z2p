@@ -1,4 +1,6 @@
-use crate::parse::StatusAttr;
+mod parser;
+
+use parser::StatusAttr;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::ItemEnum;
@@ -39,18 +41,6 @@ pub(crate) fn impl_status_code(original_enum: &mut ItemEnum) -> TokenStream2 {
                 }));
 
                 ::axum::response::IntoResponse::into_response((status_code, body))
-            }
-        }
-    }
-}
-
-pub(crate) fn impl_debug_chain(original_enum: &mut ItemEnum) -> TokenStream2 {
-    let enum_ident = &original_enum.ident;
-
-    quote! {
-        impl ::std::fmt::Debug for #enum_ident {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                ::newsletter_macros::write_error_chain(f, self)
             }
         }
     }

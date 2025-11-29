@@ -17,6 +17,7 @@
     - In memory db has its own set of problems with it being not shared across the entire test.
       - Shared memory is an option which I ended up using. There are some caveats to it, I hope I don't run into them
   - I could have created a trait based dependency injection but I wanted to see how feasible it is to fully migrate. Plus that would have taken more time when my goal was to minimize the overhead of running tests
+- Created a proc macro to derive 2 things, `IntoResponse` from axum for our error types and Debug Chain impl(that the book mentions). It happened to be my first macro I ever wrote. Code, imo, is very simple and can be used to look at how to write macros. 
 
 - Using **Nix flakes** for the entirety of the deployment pipeline.
   - Also Integrating Nix into Github Actions.
