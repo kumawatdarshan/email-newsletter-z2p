@@ -67,7 +67,6 @@ pub(crate) fn impl_status_code(original_enum: &mut ItemEnum) -> TokenStream2 {
                 ::tracing::error!(exception.details = ?self, exception.message = %body);
 
                 let body = ::axum::Json(::newsletter_macros::Response {
-                    status_code: status_code.as_u16(),
                     error: body
                 });
 

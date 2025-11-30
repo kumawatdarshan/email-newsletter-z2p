@@ -15,7 +15,7 @@ in rec {
       inherit (commonArgs) buildInputs nativeBuildInputs;
       doCheck = false;
       RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C target-cpu=native";
-      SQLX_OFFLINE = true;
+      # SQLX_OFFLINE = true; was needed in pgsql, i dont think i need in sqlite
       CARGO_WORKSPACE_DIR = commonArgs.src;
     });
 

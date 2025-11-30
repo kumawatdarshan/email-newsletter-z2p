@@ -4,4 +4,6 @@
 /result
 /result-*
 .env
-data.db
+*.db
+*.db-shm
+*.db-wal

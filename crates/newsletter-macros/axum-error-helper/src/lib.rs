@@ -9,7 +9,6 @@ mod into_error_response;
 /// Also integrates tracing and outputs json with the following schema
 /// ```rust
 /// struct ResponseBody {
-///   status_code: u16,
 ///   error: String,
 /// }
 /// ```
@@ -18,11 +17,11 @@ mod into_error_response;
 ///
 /// ```rs
 /// #[derive(IntoErrorResponse)]
-/// pub enum Error {
-///     #[status(StatusCode::UNPROCESSABLE_ENTITY)]
-///     ValidationError(String),
-///     #[status(StatusCode::INTERNAL_SERVER_ERROR)]
-///     UnexpectedError(#[from] anyhow::Error),
+/// pub enum PublishError {
+///     #[status(StatusCode::UNAUTHORIZED)]
+///     #[headers([header::WWW_AUTHENTICATE = r#"Basic realm="publish""#])] // default is none
+///     AuthError(#[source] anyhow::Error),
+///     UnexpectedError(#[from] anyhow::Error), // if no status provided, defaults to INTERNAL_SERVER_ERROR
 /// }
 #[proc_macro_derive(IntoErrorResponse, attributes(status, headers))]
 pub fn error_macro(item: TokenStream) -> TokenStream {

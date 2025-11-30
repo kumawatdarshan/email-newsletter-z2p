@@ -3,8 +3,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    # process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    # services-flake.url = "github:juspay/services-flake";
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,10 +35,11 @@
       };
       craneLib = crane.mkLib pkgs;
 
+      unfilteredRoot = ./.;
       src = pkgs.lib.fileset.toSource {
-        root = ./.;
+        root = unfilteredRoot;
         fileset = pkgs.lib.fileset.unions [
-          (craneLib.fileset.commonCargoSources ./.)
+          (craneLib.fileset.commonCargoSources unfilteredRoot)
           ./migrations
           ./configuration
           ./.sqlx
@@ -58,7 +57,8 @@
       commonArgs = {
         inherit src buildInputs nativeBuildInputs;
         strictDeps = true;
-        SCCACHE_DIR = "/tmp/sccache"; # not using docker for dev, fine with cache miss.
+        SCCACHE_DIR = "/tmp/sccache"; # not using nix build for dev, fine with cache miss.
+        SQLX_OFFLINE = true;
       };
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 

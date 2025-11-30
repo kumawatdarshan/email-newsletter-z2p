@@ -3,7 +3,6 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct Response {
-    pub status_code: u16,
     pub error: String,
 }
 
