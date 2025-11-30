@@ -1,5 +1,3 @@
-#![no_std]
-
 use proc_macro::TokenStream;
 use syn::ItemEnum;
 
@@ -15,10 +13,6 @@ mod into_error_response;
 ///   error: String,
 /// }
 /// ```
-/// It can certainly improve as the current return type is
-/// ```rust
-/// (http::StatusCode, ResponseBody)
-/// ```
 ///
 /// # Usage
 ///
@@ -30,7 +24,7 @@ mod into_error_response;
 ///     #[status(StatusCode::INTERNAL_SERVER_ERROR)]
 ///     UnexpectedError(#[from] anyhow::Error),
 /// }
-#[proc_macro_derive(IntoErrorResponse, attributes(status))]
+#[proc_macro_derive(IntoErrorResponse, attributes(status, headers))]
 pub fn error_macro(item: TokenStream) -> TokenStream {
     let mut input: ItemEnum = syn::parse(item).expect("expected an enum");
     let expanded = crate::into_error_response::impl_status_code(&mut input);

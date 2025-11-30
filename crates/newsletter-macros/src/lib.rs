@@ -1,4 +1,11 @@
 pub use axum_error_helper::{DebugChain, IntoErrorResponse};
+use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct Response {
+    pub status_code: u16,
+    pub error: String,
+}
 
 pub fn write_error_chain(
     f: &mut core::fmt::Formatter,
