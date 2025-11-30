@@ -156,6 +156,7 @@ dependencies = [
 name = "axum-error-helper"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "deluxe",
  "proc-macro2",
  "quote",
@@ -1405,6 +1406,7 @@ name = "newsletter-macros"
 version = "0.1.0"
 dependencies = [
  "axum-error-helper",
+ "serde",
 ]
 
 [[package]]
@@ -1952,6 +1954,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64",
  "domain",
  "email-client",
  "hakari-hack",
@@ -1959,6 +1962,7 @@ dependencies = [
  "newsletter-macros",
  "rand 0.9.2",
  "reqwest",
+ "secrecy",
  "serde",
  "serde_json",
  "settings",

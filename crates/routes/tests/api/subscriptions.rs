@@ -1,4 +1,4 @@
-use crate::helpers::spawn_app_testing;
+use crate::helpers::{FakeData, spawn_app_testing};
 use axum::http::StatusCode;
 
 #[tokio::test]

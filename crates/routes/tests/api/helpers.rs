@@ -1,7 +1,7 @@
 use reqwest::{StatusCode, Url};
 use routes::get_router;
 use settings::{DatabaseConfiguration, get_configuration};
-use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions};
+use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
 use state::{AppState, create_email_client};
 use std::{io::Result, path::PathBuf};
 use telemetry::init_tracing;
@@ -26,11 +26,17 @@ pub struct ConfirmationLinks {
     pub plaintext: Url,
 }
 
+pub(crate) trait FakeData {
+    fn fake_body(&self) -> String;
+    fn fake_newsletter(&self) -> serde_json::Value;
+}
+
 impl TestApp {
     pub(crate) async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
         reqwest::Client::new()
             .post(format!("{}/newsletters", &self.address))
             .json(&body)
+            .basic_auth(Uuid::new_v4(), Some(Uuid::new_v4()))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -69,16 +75,28 @@ impl TestApp {
         ConfirmationLinks { html, plaintext }
     }
 
-    pub(crate) fn fake_body(&self) -> String {
-        "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
-    }
-
     pub(crate) async fn mock_mail_server(&self, status_code: StatusCode) {
         Mock::given(path("/email"))
             .and(method("POST"))
             .respond_with(ResponseTemplate::new(status_code))
             .mount(&self.email_server)
             .await
+    }
+}
+
+impl FakeData for TestApp {
+    fn fake_body(&self) -> String {
+        "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
+    }
+
+    fn fake_newsletter(&self) -> serde_json::Value {
+        serde_json::json!({
+           "title": "Newsletter Title",
+           "content": {
+               "text": "Plain-text Body",
+               "html": "<p>HTML body</p>",
+           }
+        })
     }
 }
 

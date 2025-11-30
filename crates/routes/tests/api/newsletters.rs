@@ -1,4 +1,4 @@
-use crate::helpers::{ConfirmationLinks, TestApp, spawn_app_testing};
+use crate::helpers::{ConfirmationLinks, FakeData, TestApp, spawn_app_testing};
 use axum::http::StatusCode;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
@@ -49,13 +49,7 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() {
         .mount(&app.email_server)
         .await;
 
-    let newsletter_request_body = serde_json::json!({
-       "title": "Newsletter Title",
-       "content": {
-           "text": "Plain-text Body",
-           "html": "<p>HTML body</p>",
-       }
-    });
+    let newsletter_request_body = app.fake_newsletter();
 
     let response = app.post_newsletters(newsletter_request_body).await;
 
@@ -73,13 +67,7 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() {
         .mount(&app.email_server)
         .await;
 
-    let newsletter_request_body = serde_json::json!({
-       "title": "Newsletter Title",
-       "content": {
-           "text": "Plain-text Body",
-           "html": "<p>HTML body</p>",
-       }
-    });
+    let newsletter_request_body = app.fake_newsletter();
 
     let response = app.post_newsletters(newsletter_request_body).await;
 
@@ -109,10 +97,27 @@ async fn newsletters_returns_400_for_invalid_data() {
         let response = app.post_newsletters(invalid_body).await;
 
         assert_eq!(
-            400,
+            StatusCode::UNPROCESSABLE_ENTITY,
             response.status(),
-            "The API did not fail with 400 Bad Request when the payload was {}.",
-            error_message
+            "The API did not fail with 400 Bad Request when the payload was {error_message}."
         );
     }
+}
+
+#[tokio::test]
+async fn requests_missing_auth_are_rejected() {
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
+
+    let response = reqwest::Client::new()
+        .post(format!("{}/newsletters", app.address))
+        .json(&app.fake_newsletter())
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(StatusCode::UNAUTHORIZED, response.status());
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
 }
