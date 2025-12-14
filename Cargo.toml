@@ -68,6 +68,8 @@ sqlx = { version = "0.8.6", default-features = false, features = [
   "chrono",
   "migrate",
 ] }
+base64 = "0.22.1"
+sha3 = "0.10.8"
 
 # Local crates
 

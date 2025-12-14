@@ -6,7 +6,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
-    let body = app.fake_body();
+    let body = app.fake_email();
 
     app.mock_mail_server(StatusCode::OK).await;
 
@@ -20,7 +20,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
 async fn subscribe_persists_the_new_subscriber() {
     // Arrange
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let body = app.fake_body();
+    let body = app.fake_email();
 
     app.mock_mail_server(StatusCode::OK).await;
     let response = app.post_subscriptions(body).await;
@@ -66,7 +66,7 @@ async fn subscribe_returns_422_when_invalid_fields() {
 #[tokio::test]
 async fn subscribe_sends_a_confirmation_link_for_valid_data() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let body = app.fake_body();
+    let body = app.fake_email();
 
     app.mock_mail_server(StatusCode::OK).await;
 
@@ -81,7 +81,7 @@ async fn subscribe_sends_a_confirmation_link_for_valid_data() {
 #[tokio::test]
 async fn subscribe_fails_if_there_is_fatal_db_error() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let body = app.fake_body();
+    let body = app.fake_email();
 
     // Sabotaging the db
     sqlx::query!("DROP TABLE subscription_tokens")

@@ -16,11 +16,12 @@ test-subcribe:
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d (random_user)
 
-test:
-    SQLX_OFFLINE=false cargo test
+test name="":
+    @set -euo pipefail
+    cargo nextest run "{{name}}"
 
 check:
-    SQLX_OFFLINE=false cargo check
+    cargo check
 
 migrate:
     sqlx migrate run

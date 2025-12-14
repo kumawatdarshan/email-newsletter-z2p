@@ -15,7 +15,7 @@ async fn confirmations_without_tokens_are_rejected_with_a_400() {
 #[tokio::test]
 async fn link_returned_by_subscribe_returns_a_200() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let body = app.fake_body();
+    let body = app.fake_email();
 
     app.mock_mail_server(StatusCode::OK).await;
     app.post_subscriptions(body).await;
@@ -31,7 +31,7 @@ async fn link_returned_by_subscribe_returns_a_200() {
 #[tokio::test]
 async fn clicking_on_confirmation_link_confirms_subscription() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let body = app.fake_body();
+    let body = app.fake_email();
 
     app.mock_mail_server(StatusCode::OK).await;
     app.post_subscriptions(body).await;

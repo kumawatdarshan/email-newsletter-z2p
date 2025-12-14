@@ -1,5 +1,6 @@
 use crate::helpers::{ConfirmationLinks, FakeData, TestApp, spawn_app_testing};
 use axum::http::StatusCode;
+use sqlx::types::Uuid;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -12,7 +13,7 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
         .mount_as_scoped(&app.email_server)
         .await;
 
-    app.post_subscriptions(app.fake_body())
+    app.post_subscriptions(app.fake_email())
         .await
         .error_for_status()
         .unwrap();
@@ -53,7 +54,7 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() {
 
     let response = app.post_newsletters(newsletter_request_body).await;
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(StatusCode::OK, response.status());
 }
 
 #[tokio::test]
@@ -71,7 +72,7 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() {
 
     let response = app.post_newsletters(newsletter_request_body).await;
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(StatusCode::OK, response.status());
 }
 
 #[tokio::test]
@@ -114,6 +115,46 @@ async fn requests_missing_auth_are_rejected() {
         .send()
         .await
         .expect("Failed to send request");
+
+    assert_eq!(StatusCode::UNAUTHORIZED, response.status());
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
+}
+
+#[tokio::test]
+async fn non_existing_user_is_rejected() {
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let user = Uuid::new_v4().to_string();
+    let pw = Uuid::new_v4().to_string();
+
+    let newsletter_request_body = app.fake_newsletter();
+
+    let response = app
+        .post_newsletters_with_auth(newsletter_request_body, &user, &pw)
+        .await;
+
+    assert_eq!(StatusCode::UNAUTHORIZED, response.status());
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
+}
+
+#[tokio::test]
+async fn invalid_password_is_rejected() {
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let user = &app.test_user.username;
+
+    let pw = Uuid::new_v4().to_string();
+    assert_ne!(pw, app.test_user.password);
+
+    let newsletter_request_body = app.fake_newsletter();
+
+    let response = app
+        .post_newsletters_with_auth(newsletter_request_body, user, &pw)
+        .await;
 
     assert_eq!(StatusCode::UNAUTHORIZED, response.status());
     assert_eq!(

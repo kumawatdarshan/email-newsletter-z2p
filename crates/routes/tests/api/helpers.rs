@@ -1,3 +1,7 @@
+use argon2::{
+    Argon2, Params,
+    password_hash::{SaltString, rand_core::OsRng},
+};
 use reqwest::{StatusCode, Url};
 use routes::get_router;
 use settings::{DatabaseConfiguration, get_configuration};
@@ -18,6 +22,14 @@ pub struct TestApp {
     pub db_pool: SqlitePool,
     pub email_server: MockServer,
     pub api_client: reqwest::Client,
+    pub test_user: TestUser,
+}
+
+#[derive(Debug)]
+pub struct TestUser {
+    pub user_id: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Debug)]
@@ -27,20 +39,31 @@ pub struct ConfirmationLinks {
 }
 
 pub(crate) trait FakeData {
-    fn fake_body(&self) -> String;
+    fn fake_email(&self) -> String;
     fn fake_newsletter(&self) -> serde_json::Value;
 }
 
 impl TestApp {
     pub(crate) async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+        self.post_newsletters_with_auth(body, &self.test_user.username, &self.test_user.password)
+            .await
+    }
+
+    pub(crate) async fn post_newsletters_with_auth(
+        &self,
+        body: serde_json::Value,
+        username: &str,
+        password: &str,
+    ) -> reqwest::Response {
         reqwest::Client::new()
             .post(format!("{}/newsletters", &self.address))
             .json(&body)
-            .basic_auth(Uuid::new_v4(), Some(Uuid::new_v4()))
+            .basic_auth(username, Some(password))
             .send()
             .await
             .expect("Failed to execute request.")
     }
+
     pub(crate) async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
             .post(format!("{}/subscribe", &self.address))
@@ -84,8 +107,44 @@ impl TestApp {
     }
 }
 
+impl TestUser {
+    pub fn generate() -> Self {
+        Self {
+            user_id: Uuid::new_v4().to_string(),
+            username: Uuid::new_v4().to_string(),
+            password: Uuid::new_v4().to_string(),
+        }
+    }
+    async fn store(&self, pool: &SqlitePool) {
+        use argon2::PasswordHasher;
+        let salt = SaltString::generate(&mut OsRng);
+        // from the dummy hash
+        let pw_hash = Argon2::new(
+            argon2::Algorithm::Argon2id,
+            argon2::Version::V0x13,
+            Params::new(15000, 2, 1, None).unwrap(),
+        )
+        .hash_password(self.password.as_bytes(), &salt)
+        .unwrap()
+        .to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO users (user_id, username, password_hash)
+            VALUES ($1, $2, $3)
+        "#,
+            self.user_id,
+            self.username,
+            pw_hash,
+        )
+        .execute(pool)
+        .await
+        .expect("Failed to create test user");
+    }
+}
+
 impl FakeData for TestApp {
-    fn fake_body(&self) -> String {
+    fn fake_email(&self) -> String {
         "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
     }
 
@@ -153,6 +212,8 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
     let db_pool = configure_test_database(&config.database).await;
     let email_client = create_email_client(&config);
     let api_client = reqwest::Client::new();
+    let test_user = TestUser::generate();
+    test_user.store(&db_pool).await;
 
     let app_state = AppState {
         db_pool: db_pool.clone(),
@@ -165,6 +226,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         db_pool,
         email_server,
         api_client,
+        test_user,
     };
 
     let router = get_router(app_state);

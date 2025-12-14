@@ -10,6 +10,7 @@
       just
       curlie
       cargo-watch
+      cargo-nextest
       cargo-hakari
       cargo-expand
       bunyan-rs
