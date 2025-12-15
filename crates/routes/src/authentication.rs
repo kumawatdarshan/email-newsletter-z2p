@@ -18,10 +18,14 @@ pub(crate) enum AuthError {
 }
 
 pub(crate) struct Credentials {
-    pub username: String,
-    pub password: SecretString,
+    pub(crate) username: String,
+    pub(crate) password: SecretString,
 }
 
+/// Returns user_id
+/// # Errors:
+/// If no such user found: AuthError::InvalidCredentials
+/// If other error: AuthError::UnexpectedError
 #[tracing::instrument(
     name = "Validate Credentials"
     skip(credentials, pool))]
@@ -57,7 +61,7 @@ pub async fn validate_credentials(
 async fn get_stored_credentials(
     username: &str,
     pool: &SqlitePool,
-) -> Result<Option<(String, SecretString)>, anyhow::Error> {
+) -> anyhow::Result<Option<(String, SecretString)>> {
     let row = sqlx::query!(
         r#"
            SELECT user_id, password_hash

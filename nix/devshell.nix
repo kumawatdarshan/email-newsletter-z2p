@@ -16,9 +16,6 @@
       bunyan-rs
     ];
 
-    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-      pkgs.openssl
-    ];
     DATABASE_URL = "sqlite:./data.db";
   };
 }
