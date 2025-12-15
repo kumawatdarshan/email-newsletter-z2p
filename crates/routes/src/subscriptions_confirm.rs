@@ -23,7 +23,8 @@ pub enum ConfirmationError {
     #[error("The confirmation token is invalid or has expired")]
     #[status(StatusCode::UNAUTHORIZED)]
     InvalidToken,
-    #[error(transparent)]
+
+    #[error("Something went wrong")]
     #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
 }

@@ -1,5 +1,10 @@
 use crate::{
-    handle_404, health::health_check, newsletters::publish_newsletter, subscriptions::subscribe,
+    handle_404,
+    health::health_check,
+    home,
+    login::{login, login_form},
+    newsletters::publish_newsletter,
+    subscriptions::subscribe,
     subscriptions_confirm::confirm,
 };
 use axum::{
@@ -18,6 +23,8 @@ pub fn get_router(app_state: AppState) -> Router {
         .propagate_x_request_id();
 
     Router::new()
+        .route("/", get(home))
+        .route("/login", get(login_form).post(login))
         .route("/health", get(health_check))
         .route("/subscribe", post(subscribe))
         .route("/subscribe/confirm", get(confirm))

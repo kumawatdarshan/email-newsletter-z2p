@@ -31,10 +31,11 @@ impl TryFrom<FormData> for NewSubscriber {
 
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum SubscribeError {
-    #[error("{0}")]
+    #[error("{0}")] // this will send what field is missing
     #[status(StatusCode::UNPROCESSABLE_ENTITY)]
     ValidationError(String),
-    #[error(transparent)]
+
+    #[error("Something went wrong")]
     #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -134,7 +135,7 @@ async fn send_confirmation_email(
     new_subscriber: NewSubscriber,
     base_url: &str,
     subscription_token: &str,
-) -> Result<(), reqwest::Error> {
+) -> Result<(), anyhow::Error> {
     // TODO: LOGS SHOULD EMIT IF I MISSED A ARG
     let confirmation_link =
         format!("{base_url}/subscribe/confirm?subscription_token={subscription_token}");
@@ -152,6 +153,7 @@ async fn send_confirmation_email(
     email_client
         .send_email(&new_subscriber.email, "Welcome!", &html, &plaintext)
         .await
+        .context("Failed to send Mail")
 }
 
 #[tracing::instrument(

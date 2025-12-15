@@ -35,6 +35,13 @@
 
 # Side Questing
 
+## 1. thiserror transparent attribute
+
+This should not be used when we don't want to expose underlying error cause to the user. That is, leaking internal representation.
+What are such situations? When mapping to DB/IO errors. Or simply any error that could help adversories to sabotage our system.Cheat Code: wherever there is UnexpectedError, avoid transparent.
+
+The book had used it in several occasions like in `ConfirmationError::UnexpectedError`, `SubscribeError::UnexpectedError` and finally `PublishError::UnexpectedError` from where I took notice of this.
+
 ## 1. Status Codes: `400 Bad Request` vs `422 Unprocessable Entity`
 
 Missing data for content type `application/x-www-form-urlencoded` results in `UNPROCESSABLE_ENTITY` and not `BAD_REQUEST`.

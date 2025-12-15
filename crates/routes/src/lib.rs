@@ -1,8 +1,13 @@
-pub(crate) mod health;
-pub(crate) mod newsletters;
-pub(crate) mod routes;
-pub(crate) mod subscriptions;
-pub(crate) mod subscriptions_confirm;
+mod health;
+mod home;
+mod login;
+mod newsletters;
+mod routes;
+mod subscriptions;
+mod subscriptions_confirm;
+mod authentication;
+
+use home::*;
 
 use axum::http::{StatusCode, Uri};
 use serde::Serialize;
