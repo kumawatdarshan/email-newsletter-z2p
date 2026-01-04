@@ -52,11 +52,7 @@ pub enum SubscribeError {
 ///   - Sending the confirmation email.
 #[tracing::instrument(
     name = "Adding a new Subscriber",
-    skip(state, form),
-    fields(
-        subscriber_email = %form.email,
-        subscriber_name = %form.name,
-    )
+    skip(state, form)
 )]
 pub(crate) async fn subscribe(
     State(state): State<Arc<AppState>>,

@@ -1,10 +1,14 @@
 use anyhow::{Context, anyhow};
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::http::header::HeaderMap;
 use base64::Engine;
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::SqlitePool;
+use std::sync::OnceLock;
 use telemetry::spawn_blocking_with_tracing;
+
+static DUMMY_HASH: OnceLock<SecretString> = OnceLock::new();
 
 // we shouldn't even be implementing IntoResponse for these errors.
 // as they are not part of http req fns
@@ -37,11 +41,19 @@ pub async fn validate_credentials(
 
     let (user_id, expected_pw_hash) = match stored_credentials {
         Ok(Some((id, hash))) => (Some(id), hash),
-        // if the query succeeded but found nothing.
-        Ok(None) => (
-            None,
-            SecretString::new("$argon2id$v=19$m=15000,t=2,p=1$...".into()), // we are doing this to force compute to avoid timing attack
-        ),
+        // if the query succeeded but found nothing. For timing attack
+        Ok(None) => {
+            let dummy = DUMMY_HASH.get_or_init(|| {
+                let salt =
+                    SaltString::encode_b64(b"pixel_2_xl_is_the_best_phone").expect("Invalid Salt");
+                let phc = Argon2::default()
+                    .hash_password(b"pokemon_is_the_best_nintendo_ip", &salt)
+                    .expect("Failed to compute dummy hash")
+                    .to_string();
+                SecretString::new(phc.into())
+            });
+            (None, dummy.clone())
+        }
         // if the query failed.
         Err(e) => return Err(AuthError::UnexpectedError(e)),
     };
