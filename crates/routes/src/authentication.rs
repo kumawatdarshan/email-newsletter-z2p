@@ -127,7 +127,7 @@ pub(crate) fn basic_authentication(headers: HeaderMap) -> Result<Credentials, Au
             .context("Failed to base64-decode 'Basic' credentials.")?;
 
         // can this utf8 error still occur
-        // ofcourse it can, first we only checked for the raw header value, which is base64 encoded.
+        // of-course it can, first we only checked for the raw header value, which is base64 encoded.
         // this time we are checking for the decoded value
         let decoded_cred =
             String::from_utf8(decoded_bytes).context("The decoded credential invalid UTF8.")?;

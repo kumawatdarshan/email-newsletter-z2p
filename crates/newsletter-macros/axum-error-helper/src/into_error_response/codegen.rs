@@ -4,11 +4,29 @@ use syn::{Fields, Ident, ItemEnum};
 
 use crate::into_error_response::parser::{HeaderKey, HeaderPair, parse_enum};
 
-// TODO: For now we ignore all params, but in future, we should expose
 fn variant_pat(enum_ident: &Ident, ident: &Ident, fields: &Fields) -> TokenStream2 {
     match fields {
-        syn::Fields::Named(_) => quote! { #enum_ident::#ident { .. } },
-        syn::Fields::Unnamed(_) => quote! { #enum_ident::#ident ( .. ) },
+        // CASE 1: Named Fields (e.g., { username, secret })
+        // available as per the field name
+        syn::Fields::Named(fields) => {
+            let bindings = fields.named.iter().map(|f| {
+                let ident = &f.ident;
+                quote! { #ident }
+            });
+            quote! { #enum_ident::#ident { #(#bindings),* } }
+        }
+
+        // CASE 2: Tuple Fields (e.g., (Error, Secret))
+        // Bound as _0, _1, _2...
+        syn::Fields::Unnamed(fields) => {
+            let bindings = fields.unnamed.iter().enumerate().map(|(i, _)| {
+                let ident = quote::format_ident!("_{}", i);
+                quote! { #ident }
+            });
+            quote! { #enum_ident::#ident ( #(#bindings),* ) }
+        }
+
+        // CASE 3: Unit Variants (No fields)
         syn::Fields::Unit => quote! { #enum_ident::#ident },
     }
 }
@@ -29,7 +47,7 @@ fn insert_header(pair: &HeaderPair) -> TokenStream2 {
     quote! {
         headers.insert(
             #expansion,
-            ::axum::http::header::HeaderValue::from_str(&#value.to_string())
+            ::axum::http::header::HeaderValue::from_str(&#value)
                 .expect("Header value must be valid ASCII")
         );
     }

@@ -31,5 +31,5 @@ pub fn get_router(app_state: AppState) -> Router {
         .route("/newsletters", post(publish_newsletter))
         .layer(middlewares)
         .fallback(handle_404)
-        .with_state(app_state.into())
+        .with_state(app_state)
 }

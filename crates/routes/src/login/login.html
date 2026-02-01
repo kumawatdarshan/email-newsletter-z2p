@@ -5,15 +5,86 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #0D1117;
+      color: #BAC2DE;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 300px;
+      padding: 20px;
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        input {
+          background: transparent;
+          border: 1px solid #30363D;
+          border-radius: 4px;
+          padding: 10px;
+          color: #F0F6FC;
+          outline: none;
+          transition: border-color 0.2s;
+
+          /* Fixed: Use & directly before the pseudo-class */
+          &:focus {
+            border-color: #58A6FF;
+          }
+        }
+      }
+
+      button {
+        background: #238636;
+        color: #ffffff;
+        border: 1px solid rgba(240, 246, 252, 0.1);
+        border-radius: 6px;
+        padding: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+
+        /* Fixed: Use & directly before the pseudo-classes */
+        &:hover {
+          background: #2EA043;
+        }
+
+        &:active {
+          background: #238636;
+        }
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <form action="/login" method="post">
-    <label for="username">Username
-      <input type="text" placeholder="Enter Username" name="username">
+  <h1>Welcome to my newsletter!</h1>
+  <form action="/login" method="POST">
+    <label for="username">
+      Username
+      <input type="text" id="username" placeholder="Enter Username" name="username" required>
     </label>
-    <label for="password">Password
-      <input type="text" placeholder="Enter Password" name="password">
+    <label for="password">
+      Password
+      <input type="password" id="password" placeholder="Enter Password" name="password" required>
     </label>
     <button type="submit">Login</button>
   </form>

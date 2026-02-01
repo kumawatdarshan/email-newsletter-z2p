@@ -8,8 +8,6 @@ use axum::{
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use serde::Deserialize;
 use sqlx::SqlitePool;
-use state::AppState;
-use std::sync::Arc;
 
 use crate::ResponseMessage;
 
@@ -29,18 +27,17 @@ pub enum ConfirmationError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
-#[tracing::instrument(name = "Confirm a pending subscriber", skip(state, parameters))]
+#[tracing::instrument(name = "Confirm a pending subscriber", skip(db_pool, parameters))]
 pub(crate) async fn confirm(
-    State(state): State<Arc<AppState>>,
+    State(db_pool): State<SqlitePool>,
     Query(parameters): Query<Parameters>,
 ) -> Result<impl IntoResponse, ConfirmationError> {
-    let subscriber_id =
-        get_subscriber_id_from_token(&state.db_pool, &parameters.subscription_token)
-            .await
-            .context("Failed to retrieve subscriber ID from token")?
-            .ok_or(ConfirmationError::InvalidToken)?;
+    let subscriber_id = get_subscriber_id_from_token(&db_pool, &parameters.subscription_token)
+        .await
+        .context("Failed to retrieve subscriber ID from token")?
+        .ok_or(ConfirmationError::InvalidToken)?;
 
-    let was_updated = confirm_subscriber(&state.db_pool, subscriber_id)
+    let was_updated = confirm_subscriber(&db_pool, subscriber_id)
         .await
         .context("Failed to mark subscriber as confirmed")?;
 

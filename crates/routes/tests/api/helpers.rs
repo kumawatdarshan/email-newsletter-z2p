@@ -219,6 +219,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         db_pool: db_pool.clone(),
         base_url: address.clone(),
         email_client,
+        hmac_secret: config.application.hmac_secret.into(),
     };
 
     let test_app = TestApp {

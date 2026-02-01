@@ -19,8 +19,8 @@ impl Default for StatusAttr {
 ///  Represents:
 /// ```rs
 /// #[headers([
-///     "WWW-Authenticate" = "Basic realm=\"newsletter\"",
-///     "X-Reason" = reason
+///     "WWW-Authenticate" , "Basic realm=\"newsletter\"",
+///     "X-Reason" , reason
 /// ]
 /// )]
 /// ```
@@ -50,7 +50,8 @@ impl ParseMetaItem for HeaderPair {
             return Err(input.error("Header key must be a constant (Path) or string literal"));
         };
 
-        input.parse::<Token![=]>()?;
+        // how to attach error here that macro expected this symbol.
+        input.parse::<Token![,]>()?;
 
         let value = input.parse()?;
 

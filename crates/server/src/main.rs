@@ -15,14 +15,15 @@ async fn main() -> Result<()> {
         .await
         .context(format!("Failed to bind to address: {base_url}"))?;
 
-    let pool = SqlitePool::connect_lazy_with(config.database.options());
+    let db_pool = SqlitePool::connect_lazy_with(config.database.options());
 
     let email_client = create_email_client(&config);
 
     let app_state = AppState {
-        db_pool: pool,
+        db_pool,
         email_client,
         base_url,
+        hmac_secret: config.application.hmac_secret.into(),
     };
 
     let router = get_router(app_state);

@@ -17,7 +17,7 @@ pub fn get_configuration() -> Result<Configuration, ConfigError> {
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or("local".into())
         .try_into()
-        .expect("Faild to parse APP_ENVIRONMENT variable");
+        .expect("Failed to parse APP_ENVIRONMENT variable");
 
     // this would set APP_{Configuration}_{Field}
     let settings = Config::builder()
@@ -48,6 +48,7 @@ pub struct Configuration {
 pub struct ApplicationConfiguration {
     pub port: Port,
     pub host: String,
+    pub hmac_secret: SecretString,
 }
 
 #[derive(Deserialize, Debug)]

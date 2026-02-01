@@ -6,11 +6,9 @@ use newsletter_macros::{DebugChain, IntoErrorResponse};
 use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
 use sqlx::{
-    Sqlite, Transaction,
+    Sqlite, SqlitePool, Transaction,
     types::{Uuid, chrono::Utc},
 };
-use state::AppState;
-use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {
@@ -52,16 +50,17 @@ pub enum SubscribeError {
 ///   - Sending the confirmation email.
 #[tracing::instrument(
     name = "Adding a new Subscriber",
-    skip(state, form)
+    skip(db_pool, email_client, base_url, form)
 )]
 pub(crate) async fn subscribe(
-    State(state): State<Arc<AppState>>,
+    State(db_pool): State<SqlitePool>,
+    State(email_client): State<EmailClient>,
+    State(base_url): State<String>,
     Form(form): Form<FormData>,
 ) -> Result<StatusCode, SubscribeError> {
     let new_subscriber = form.try_into().map_err(SubscribeError::ValidationError)?;
 
-    let mut transaction = state
-        .db_pool
+    let mut transaction = db_pool
         .begin()
         .await
         .context("Failed to begin database transaction")?;
@@ -82,13 +81,13 @@ pub(crate) async fn subscribe(
         .context("Failed to commit SQL transaction to store a new subscriber")?;
 
     send_confirmation_email(
-        &state.email_client,
+        &email_client,
         new_subscriber,
-        &state.base_url,
+        &base_url,
         &subscription_token,
     )
     .await
-    .context("Faield to send a confirmation mail")?;
+    .context("Failed to send a confirmation mail")?;
 
     Ok(StatusCode::CREATED)
 }

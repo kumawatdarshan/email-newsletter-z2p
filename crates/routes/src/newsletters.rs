@@ -5,11 +5,10 @@ use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
 use domain::SubscriberEmail;
+use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use serde::Deserialize;
 use sqlx::SqlitePool;
-use state::AppState;
-use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct BodyData {
@@ -32,7 +31,7 @@ pub enum PublishError {
     // this will delegate error to the super::authentication::AuthError
     #[error("Authentication failed.")]
     #[status(StatusCode::UNAUTHORIZED)]
-    #[headers([header::WWW_AUTHENTICATE = r#"Basic realm="publish""#])]
+    #[headers([header::WWW_AUTHENTICATE , r#"Basic realm="publish""#])]
     AuthError(#[source] crate::authentication::AuthError),
 
     #[error("Something went wrong.")]
@@ -42,19 +41,20 @@ pub enum PublishError {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(body, state, headers),
+    skip(body, db_pool,email_client, headers),
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub(crate) async fn publish_newsletter(
     headers: HeaderMap,
-    State(state): State<Arc<AppState>>,
+    State(db_pool): State<SqlitePool>,
+    State(email_client): State<EmailClient>,
     Json(body): Json<BodyData>,
 ) -> Result<impl IntoResponse, PublishError> {
     let credentials = basic_authentication(headers).map_err(PublishError::AuthError)?;
 
     tracing::Span::current().record("username", tracing::field::display(&credentials.username));
 
-    let user_id = validate_credentials(credentials, &state.db_pool)
+    let user_id = validate_credentials(credentials, &db_pool)
         .await
         // because it also makes sql queries which can fail outside the boundary of invalid credentials
         .map_err(|e| match e {
@@ -63,14 +63,13 @@ pub(crate) async fn publish_newsletter(
         })?;
     tracing::Span::current().record("user_id", tracing::field::display(&user_id));
 
-    let subcribers = get_confirmed_subscribers(&state.db_pool).await?;
+    let subscribers = get_confirmed_subscribers(&db_pool).await?;
 
-    for subscriber in subcribers {
+    for subscriber in subscribers {
         match subscriber {
             Ok(s) => {
                 let email = &s.email;
-                state
-                    .email_client
+                email_client
                     .send_email(email, &body.title, &body.content.html, &body.content.text)
                     .await
                     .with_context(|| format!("Failed to send newsletter to: {email}"))?;

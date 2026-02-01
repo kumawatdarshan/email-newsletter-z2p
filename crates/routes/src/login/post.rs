@@ -1,29 +1,49 @@
-use std::sync::Arc;
+use axum::Form;
+use hmac::Mac;
+use sqlx::SqlitePool;
 
 use axum::{
-    Form,
     body::Body,
     extract::State,
     http::{Response, StatusCode, header},
     response::IntoResponse,
 };
 use newsletter_macros::{DebugChain, IntoErrorResponse};
-use secrecy::SecretString;
-use state::AppState;
+use secrecy::{ExposeSecret, SecretString};
+use state::HmacSecret;
 
 use crate::authentication::{AuthError, Credentials, validate_credentials};
 
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum LoginError {
     #[error("Authentication failed.")]
-    #[status(StatusCode::UNAUTHORIZED)]
-    #[headers([header::LOCATION = "/login"])]
+    #[status(StatusCode::SEE_OTHER)]
+    #[headers([header::LOCATION, "/login"])]
     AuthError(#[source] crate::authentication::AuthError),
 
     #[error("Something went wrong.")]
     #[status(StatusCode::SEE_OTHER)]
-    #[headers([header::LOCATION = "/login"])]
-    UnexpectedError(#[from] anyhow::Error),
+    #[headers([header::LOCATION, self.gen_redirect_with_error(hmac_secret)])]
+    UnexpectedError {
+        source: anyhow::Error,
+        hmac_secret: HmacSecret,
+    },
+}
+
+impl LoginError {
+    fn gen_redirect_with_error(&self, secret: &HmacSecret) -> String {
+        let query_string = format!("error={}", urlencoding::encode(&self.to_string()));
+
+        type HmacSha256 = hmac::Hmac<sha2::Sha256>;
+        let hmac_tag = {
+            let mut mac = HmacSha256::new_from_slice(secret.expose_secret().as_bytes()).unwrap();
+
+            mac.update(query_string.as_bytes());
+            mac.finalize().into_bytes()
+        };
+
+        format!("/login?{query_string}&tag={hmac_tag:x}")
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -33,11 +53,12 @@ pub struct FormData {
 }
 
 #[tracing::instrument(
-    skip(form, state),
+    skip(form, db_pool, hmac_secret),
     fields(username = tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
-    State(state): State<Arc<AppState>>,
+    State(db_pool): State<SqlitePool>,
+    State(hmac_secret): State<HmacSecret>,
     Form(form): Form<FormData>,
 ) -> Result<impl IntoResponse, LoginError> {
     let credentials = Credentials {
@@ -46,11 +67,14 @@ pub async fn login(
     };
 
     tracing::Span::current().record("username", tracing::field::display(&credentials.username));
-    let user_id = validate_credentials(credentials, &state.db_pool)
+    let user_id = validate_credentials(credentials, &db_pool)
         .await
         .map_err(|e| match e {
             AuthError::InvalidCredentials(_) => LoginError::AuthError(e),
-            AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+            AuthError::UnexpectedError(_) => LoginError::UnexpectedError {
+                source: e.into(),
+                hmac_secret,
+            },
         })?;
     tracing::Span::current().record("user_id", tracing::field::display(&user_id));
 

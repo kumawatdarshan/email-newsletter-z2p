@@ -1,3 +1,4 @@
+mod authentication;
 mod health;
 mod home;
 mod login;
@@ -5,7 +6,6 @@ mod newsletters;
 mod routes;
 mod subscriptions;
 mod subscriptions_confirm;
-mod authentication;
 
 use home::*;
 
