@@ -41,6 +41,7 @@ pub struct ConfirmationLinks {
 pub(crate) trait FakeData {
     fn fake_email(&self) -> String;
     fn fake_newsletter(&self) -> serde_json::Value;
+    fn fake_invalid_account(&self) -> serde_json::Value;
 }
 
 impl TestApp {
@@ -55,7 +56,7 @@ impl TestApp {
         username: &str,
         password: &str,
     ) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client
             .post(format!("{}/newsletters", &self.address))
             .json(&body)
             .basic_auth(username, Some(password))
@@ -104,6 +105,29 @@ impl TestApp {
             .respond_with(ResponseTemplate::new(status_code))
             .mount(&self.email_server)
             .await
+    }
+
+    pub(crate) async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        self.api_client
+            .post(format!("{}/login", &self.address))
+            .form(body)
+            .send()
+            .await
+            .expect("Failed to post login.")
+    }
+
+    pub(crate) async fn get_login_html(&self) -> String {
+        self.api_client
+            .get(format!("{}/login", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute login html request")
+            .text()
+            .await
+            .unwrap()
     }
 }
 
@@ -155,6 +179,13 @@ impl FakeData for TestApp {
                "text": "Plain-text Body",
                "html": "<p>HTML body</p>",
            }
+        })
+    }
+
+    fn fake_invalid_account(&self) -> serde_json::Value {
+        serde_json::json!({
+            "username": "random-username",
+            "password": "random-password",
         })
     }
 }
@@ -211,7 +242,13 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
 
     let db_pool = configure_test_database(&config.database).await;
     let email_client = create_email_client(&config);
-    let api_client = reqwest::Client::new();
+
+    let api_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
     let test_user = TestUser::generate();
     test_user.store(&db_pool).await;
 
@@ -239,4 +276,9 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
     });
 
     Ok(test_app)
+}
+
+pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers().get("Location").unwrap(), location);
 }

@@ -24,7 +24,7 @@ pub fn get_router(app_state: AppState) -> Router {
 
     Router::new()
         .route("/", get(home))
-        .route("/login", get(login_form).post(login))
+        .route("/login", post(login).get(login_form))
         .route("/health", get(health_check))
         .route("/subscribe", post(subscribe))
         .route("/subscribe/confirm", get(confirm))

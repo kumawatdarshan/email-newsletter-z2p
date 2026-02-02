@@ -29,7 +29,7 @@ struct ConfirmedSubscriber {
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum PublishError {
     // this will delegate error to the super::authentication::AuthError
-    #[error("Authentication failed.")]
+    #[error("Authentication Failed.")]
     #[status(StatusCode::UNAUTHORIZED)]
     #[headers([header::WWW_AUTHENTICATE , r#"Basic realm="publish""#])]
     AuthError(#[source] crate::authentication::AuthError),

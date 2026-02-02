@@ -1,34 +1,7 @@
-use axum::extract::{RawQuery, State};
-use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
-use hmac::{Hmac, Mac};
-use secrecy::ExposeSecret;
-use state::HmacSecret;
+use axum_extra::extract::CookieJar;
 
-#[derive(serde::Deserialize)]
-pub struct QueryParams {
-    error: String,
-    tag: String,
-}
-
-impl QueryParams {
-    fn verify(self, secret: &HmacSecret) -> Result<String, anyhow::Error> {
-        let tag = hex::decode(self.tag)?;
-        let query_string = format!("error={}", urlencoding::Encoded::new(&self.error));
-
-        let mut mac =
-            Hmac::<sha2::Sha256>::new_from_slice(secret.0.expose_secret().as_bytes()).unwrap();
-        mac.update(query_string.as_bytes());
-        mac.verify_slice(&tag)?;
-
-        Ok(self.error)
-    }
-}
-
-pub async fn login_form(
-    RawQuery(query_string): RawQuery,
-    State(hmac_secret): State<HmacSecret>,
-) -> impl IntoResponse {
+pub async fn login_form(jar: CookieJar) -> impl IntoResponse {
     fn login_html(error_html: Option<String>) -> String {
         format!(
             r#"<!DOCTYPE html>
@@ -63,31 +36,13 @@ pub async fn login_form(
         )
     }
 
-    let Some(qs) = query_string else {
-        return (StatusCode::OK, Html(login_html(None)));
-    };
+    let error_html = jar
+        .get("_flash")
+        .map(|x| format!("<p><i>{}</i></p>", x.value()));
 
-    let Ok(query) = serde_urlencoded::from_str::<QueryParams>(&qs) else {
-        tracing::warn!("Failed to deserialize query parameters");
-        return (
-            StatusCode::OK,
-            Html(login_html(Some(
-                "Failed to deserialize query parameters".into(),
-            ))),
-        );
-    };
+    // not using the hack of max age duration zero
+    // when there is first class support like this.
+    let jar = jar.remove("_flash");
 
-    let error_html = if let Ok(error) = query.verify(&hmac_secret) {
-        format!("<p><i>{}</i></p>", htmlescape::encode_minimal(&error))
-    } else {
-        tracing::warn!("Failed to verify query parameters using HMAC tag");
-        return (
-            StatusCode::OK,
-            Html(login_html(Some(
-                "Failed to verify query parameters using HMAC tag".into(),
-            ))),
-        );
-    };
-
-    (StatusCode::OK, Html(login_html(Some(error_html))))
+    (jar, Html(login_html(error_html)))
 }
