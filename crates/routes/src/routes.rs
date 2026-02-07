@@ -18,7 +18,7 @@ use tower::ServiceBuilder;
 use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
 
 pub fn get_router(app_state: AppState) -> Router {
-    let middlewares = ServiceBuilder::new()
+    let request_id_middleware = ServiceBuilder::new()
         .set_x_request_id(MakeRequestUuid)
         .layer(TraceLayer::new_for_http().make_span_with(RequestIdMakeSpan))
         .propagate_x_request_id();
@@ -27,6 +27,10 @@ pub fn get_router(app_state: AppState) -> Router {
     let session_store = tower_sessions::MemoryStore::default();
     let session_layer =
         tower_sessions::SessionManagerLayer::new(session_store).with_secure(!is_dev_server);
+
+    let session_middleware = ServiceBuilder::new()
+        .layer(MessagesManagerLayer)
+        .layer(session_layer);
 
     Router::new()
         .route("/", get(home))
@@ -39,9 +43,8 @@ pub fn get_router(app_state: AppState) -> Router {
         // https://github.com/maxcountryman/tower-sessions/discussions/100
         // > tower-sessions doesn't provide signing because no data is stored in the cookie.
         // > In other words, the cookie value is a pointer to the data stored server side.
-        .layer(session_layer)
-        .layer(MessagesManagerLayer)
-        .layer(middlewares)
+        .layer(session_middleware)
+        .layer(request_id_middleware)
         .fallback(handle_404)
         .with_state(app_state)
 }

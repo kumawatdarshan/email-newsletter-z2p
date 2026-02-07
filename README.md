@@ -35,6 +35,13 @@
 
 # Side Questing
 
+## 1. Axum-messages store
+
+To my understanding, axum-messages rely on a external store impl. One such impl is provided by `tower-sessions` itself, the "MemoryStore". That seemed like the perfect option as the next step should be redis. But I quickly ran into a bad bad problem. 
+All, literally all my tests failed. I couldn't figure out why. I thought its some library bug. I cloned `axum-messages`, I thought I found the bug. It exists in `tower-sessions`.
+Turns out I was stupid in that regards, I forgot to keep `tower-sessions` and `tower-sessions-core` in sync which caused those bugs. Anyway, I again forked `tower-sessions` trying to find whats wrong.
+And literally nothing. I had a moment of epiphany as I stared at the error message which was with me since the very beginning `*session not found in request extensions;* do tower-sessions versions match?`. I had not setup sessions. It had no way of retrieving, ofcourse it was failing. 
+
 ## 1. thiserror transparent attribute
 
 This should not be used when we don't want to expose underlying error cause to the user. That is, leaking internal representation.
