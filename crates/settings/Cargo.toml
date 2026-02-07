@@ -9,6 +9,7 @@ secrecy.workspace = true
 serde.workspace = true
 reqwest.workspace = true
 sqlx.workspace = true
+url.workspace = true
 dotenvy.workspace = true
 tracing-log.workspace = true
 

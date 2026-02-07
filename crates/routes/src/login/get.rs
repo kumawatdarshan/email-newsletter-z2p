@@ -1,8 +1,9 @@
 use axum::response::{Html, IntoResponse};
-use axum_extra::extract::CookieJar;
+use axum_messages::Messages;
+use std::fmt::Write;
 
-pub async fn login_form(jar: CookieJar) -> impl IntoResponse {
-    fn login_html(error_html: Option<String>) -> String {
+pub async fn login_form(messages: Messages) -> impl IntoResponse {
+    fn login_html(error_html: String) -> String {
         format!(
             r#"<!DOCTYPE html>
 <html lang="en">
@@ -32,17 +33,14 @@ pub async fn login_form(jar: CookieJar) -> impl IntoResponse {
     </form>
   </body>
 </html>"#,
-            error_html.unwrap_or_default()
+            error_html
         )
     }
 
-    let error_html = jar
-        .get("_flash")
-        .map(|x| format!("<p><i>{}</i></p>", x.value()));
+    let mut error_html = String::new();
+    messages
+        .into_iter()
+        .for_each(|msg| writeln!(error_html, "<p><i>{}</i></p>", msg).unwrap());
 
-    // not using the hack of max age duration zero
-    // when there is first class support like this.
-    let jar = jar.remove("_flash");
-
-    (jar, Html(login_html(error_html)))
+    Html(login_html(error_html))
 }

@@ -223,8 +223,8 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
 
     let config = {
         let mut c = get_configuration().expect("Failed to read Configuration");
-        let email_client_url = reqwest::Url::parse(&email_server.uri())
-            .map_err(|_| std::io::ErrorKind::InvalidInput)?;
+        let email_client_url =
+            url::Url::parse(&email_server.uri()).map_err(|_| std::io::ErrorKind::InvalidInput)?;
         c.database.url = "sqlite::memory:".to_owned();
         c.email_client.base_url = email_client_url;
         // randomized OS port

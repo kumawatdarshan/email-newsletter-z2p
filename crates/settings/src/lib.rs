@@ -59,7 +59,7 @@ pub struct DatabaseConfiguration {
 
 #[derive(Deserialize, Debug)]
 pub struct EmailClientConfiguration {
-    pub base_url: reqwest::Url,
+    pub base_url: url::Url,
     pub sender_email: String,
     pub authorization_token: SecretString,
     pub timeout_ms: u64,

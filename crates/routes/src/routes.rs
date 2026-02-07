@@ -11,6 +11,7 @@ use axum::{
     Router,
     routing::{get, post},
 };
+use axum_messages::MessagesManagerLayer;
 use state::AppState;
 use telemetry::RequestIdMakeSpan;
 use tower::ServiceBuilder;
@@ -22,6 +23,11 @@ pub fn get_router(app_state: AppState) -> Router {
         .layer(TraceLayer::new_for_http().make_span_with(RequestIdMakeSpan))
         .propagate_x_request_id();
 
+    let is_dev_server = true;
+    let session_store = tower_sessions::MemoryStore::default();
+    let session_layer =
+        tower_sessions::SessionManagerLayer::new(session_store).with_secure(!is_dev_server);
+
     Router::new()
         .route("/", get(home))
         .route("/login", post(login).get(login_form))
@@ -29,6 +35,12 @@ pub fn get_router(app_state: AppState) -> Router {
         .route("/subscribe", post(subscribe))
         .route("/subscribe/confirm", get(confirm))
         .route("/newsletters", post(publish_newsletter))
+        // unlike in `actix_session` implementation, we don't need to provide any signing key because cookie has no session data.
+        // https://github.com/maxcountryman/tower-sessions/discussions/100
+        // > tower-sessions doesn't provide signing because no data is stored in the cookie.
+        // > In other words, the cookie value is a pointer to the data stored server side.
+        .layer(session_layer)
+        .layer(MessagesManagerLayer)
         .layer(middlewares)
         .fallback(handle_404)
         .with_state(app_state)

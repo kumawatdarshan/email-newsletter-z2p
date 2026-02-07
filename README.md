@@ -121,3 +121,9 @@ response:
   "id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794"
 }
 ```
+
+
+### Acknowledgements:
+
+1. [Zero2Prod in axum by Zercerium](https://github.com/Zercerium/zero2prod)
+> Helped me alot, especially in second half of chapter 10.
