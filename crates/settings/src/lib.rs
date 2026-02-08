@@ -7,34 +7,6 @@ use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub fn get_configuration() -> Result<Configuration, ConfigError> {
-    dotenvy::dotenv().ok();
-
-    // this can be compile time because we are providing from the .cargo/config.toml
-    let configuration_dir = PathBuf::from(concat!(env!("CARGO_WORKSPACE_DIR"), "/configuration"));
-
-    // this can't be as it can be changed in runtime
-    let environment: Environment = std::env::var("APP_ENVIRONMENT")
-        .unwrap_or("local".into())
-        .try_into()
-        .expect("Failed to parse APP_ENVIRONMENT variable");
-
-    // this would set APP_{Configuration}_{Field}
-    let settings = Config::builder()
-        .add_source(File::from(configuration_dir.join("base.json")))
-        .add_source(File::from(
-            configuration_dir.join(format!("{}.json", environment.as_str())),
-        ))
-        .add_source(
-            config::Environment::with_prefix("APP")
-                .prefix_separator("_")
-                .separator("__"),
-        )
-        .build()?;
-
-    settings.try_deserialize::<Configuration>()
-}
-
 pub type Port = u16;
 
 #[derive(Deserialize, Debug)]
@@ -117,4 +89,32 @@ impl TryFrom<String> for Environment {
             )),
         }
     }
+}
+
+pub fn get_configuration() -> Result<Configuration, ConfigError> {
+    dotenvy::dotenv().ok();
+
+    // this can be compile time because we are providing from the .cargo/config.toml
+    let configuration_dir = PathBuf::from(concat!(env!("CARGO_WORKSPACE_DIR"), "/configuration"));
+
+    // this can't be as it can be changed in runtime
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or("local".into())
+        .try_into()
+        .expect("Failed to parse APP_ENVIRONMENT variable");
+
+    // this would set APP_{Configuration}_{Field}
+    let settings = Config::builder()
+        .add_source(File::from(configuration_dir.join("base.json")))
+        .add_source(File::from(
+            configuration_dir.join(format!("{}.json", environment.as_str())),
+        ))
+        .add_source(
+            config::Environment::with_prefix("APP")
+                .prefix_separator("_")
+                .separator("__"),
+        )
+        .build()?;
+
+    settings.try_deserialize::<Configuration>()
 }

@@ -22,3 +22,22 @@ pub fn create_email_client(config: &Configuration) -> EmailClient {
         timeout,
     )
 }
+
+pub async fn get_redis(host: String, port: u16) -> anyhow::Result<tower_sessions_redis_store::fred::prelude::Pool> {
+    use tower_sessions_redis_store::fred::{
+        clients::Pool, interfaces::ClientLike, prelude::ServerConfig, types::config::Config,
+    };
+
+    let config = Config {
+        server: ServerConfig::new_centralized(host, port),
+        ..Config::default()
+    };
+
+    let redis_pool = Pool::new(config, None, None, None, 6)?;
+
+    let _redis_join_handle = redis_pool.connect();
+
+    redis_pool.wait_for_connect().await?;
+
+    Ok(redis_pool)
+}

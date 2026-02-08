@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 sqlx.workspace = true
+secrecy.workspace = true
 tokio.workspace = true
 axum.workspace = true
 anyhow.workspace = true

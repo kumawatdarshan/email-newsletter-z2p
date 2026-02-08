@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use routes::get_router;
+use secrecy::ExposeSecret;
 use settings::get_configuration;
 use sqlx::SqlitePool;
-use state::{AppState, create_email_client};
+use state::{AppState, create_email_client, get_redis};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -24,8 +25,16 @@ async fn main() -> Result<()> {
         email_client,
         base_url,
     };
+    let redis_pool = get_redis(
+        config.redis.host.expose_secret().to_string(),
+        config.redis.port,
+    )
+    .await
+    .context("Failed to initialize redis pool")?;
 
-    let router = get_router(app_state).await.expect("Failed to get router");
+    let router = get_router(app_state, redis_pool)
+        .await
+        .expect("Failed to get router");
 
     axum::serve(listener, router)
         .await

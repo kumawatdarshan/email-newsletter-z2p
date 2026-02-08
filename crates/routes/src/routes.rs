@@ -12,6 +12,7 @@ use axum::{
     routing::{get, post},
 };
 use axum_messages::MessagesManagerLayer;
+use settings::Port;
 use state::AppState;
 use telemetry::RequestIdMakeSpan;
 use tower::ServiceBuilder;
@@ -19,27 +20,12 @@ use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLay
 use tower_sessions::{Expiry, SessionManagerLayer, cookie::time::Duration};
 use tower_sessions_redis_store::{RedisStore, fred::prelude::Pool};
 
-pub async fn get_redis() -> anyhow::Result<Pool> {
-    use tower_sessions_redis_store::fred::{
-        clients::Pool, interfaces::ClientLike, types::config::Config,
-    };
-
-    let redis_pool = Pool::new(Config::default(), None, None, None, 6)?;
-
-    let _redis_join_handle = redis_pool.connect();
-
-    redis_pool.wait_for_connect().await?;
-
-    Ok(redis_pool)
-}
-
-pub async fn get_router(app_state: AppState) -> anyhow::Result<Router> {
+pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result<Router> {
     let request_id_middleware = ServiceBuilder::new()
         .set_x_request_id(MakeRequestUuid)
         .layer(TraceLayer::new_for_http().make_span_with(RequestIdMakeSpan))
         .propagate_x_request_id();
 
-    let redis_pool = get_redis().await?;
     let session_store = RedisStore::new(redis_pool);
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false)

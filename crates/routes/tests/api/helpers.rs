@@ -1,13 +1,15 @@
+use anyhow::Context;
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
 use reqwest::{StatusCode, Url};
 use routes::get_router;
+use secrecy::ExposeSecret;
 use settings::{DatabaseConfiguration, get_configuration};
 use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
-use state::{AppState, create_email_client};
-use std::{io::Result, path::PathBuf};
+use state::{AppState, create_email_client, get_redis};
+use std::path::PathBuf;
 use telemetry::init_tracing;
 use tokio::net::TcpListener;
 use wiremock::{
@@ -216,7 +218,7 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> SqlitePool
 /// 1. Mock Email Server
 /// 1. Mutates configuration for test needs
 /// 1. Spawns a tokio thread for running the axum server
-pub async fn spawn_app_testing() -> Result<TestApp> {
+pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
     init_tracing()?;
 
     let email_server = MockServer::start().await;
@@ -224,7 +226,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
     let config = {
         let mut c = get_configuration().expect("Failed to read Configuration");
         let email_client_url =
-            url::Url::parse(&email_server.uri()).map_err(|_| std::io::ErrorKind::InvalidInput)?;
+            url::Url::parse(&email_server.uri()).context("Invalid Input for email client")?;
         c.database.url = "sqlite::memory:".to_owned();
         c.email_client.base_url = email_client_url;
         // randomized OS port
@@ -266,7 +268,16 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         test_user,
     };
 
-    let router = get_router(app_state).await.expect("Failed to get router");
+    let redis_pool = get_redis(
+        config.redis.host.expose_secret().to_string(),
+        config.redis.port,
+    )
+    .await
+    .context("Failed to initialize redis pool")?;
+
+    let router = get_router(app_state, redis_pool)
+        .await
+        .expect("Failed to get router");
 
     tokio::spawn(async move {
         axum::serve(listener, router)
@@ -275,9 +286,4 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
     });
 
     Ok(test_app)
-}
-
-pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
-    assert_eq!(response.headers().get("Location").unwrap(), location);
 }

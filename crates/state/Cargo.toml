@@ -10,6 +10,8 @@ repository.workspace = true
 sqlx.workspace = true
 secrecy.workspace = true
 axum.workspace = true
+anyhow.workspace = true
+tower-sessions-redis-store.workspace = true
 
 email-client.workspace = true
 settings.workspace = true

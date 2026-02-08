@@ -1,5 +1,6 @@
+use reqwest::StatusCode;
+
 use crate::helpers::FakeData;
-use crate::helpers::assert_is_redirect_to;
 use crate::helpers::spawn_app_testing;
 
 #[tokio::test]
@@ -25,4 +26,9 @@ async fn an_error_flash_message_is_sent_on_failure() -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers().get("Location").unwrap(), location);
 }
