@@ -5,6 +5,7 @@ mod login;
 mod middlewares;
 mod newsletters;
 mod routes;
+mod startup;
 mod subscriptions;
 mod subscriptions_confirm;
 use email_client::EmailClient;
@@ -19,7 +20,7 @@ use sqlx::SqlitePool;
 use tracing::warn;
 
 // re-exports
-pub use routes::get_router;
+pub use startup::{Application, ApplicationBuilder};
 
 /// State needed for various services like ~psql~,sqlite, redis, etc
 #[derive(Debug, Clone, FromRef)]

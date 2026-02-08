@@ -1,17 +1,13 @@
 use anyhow::Context;
-use api::{AppState, get_router};
+use api::ApplicationBuilder;
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
-use email_client::EmailClient;
-use redis_client::create_redis_pool;
-use reqwest::{StatusCode, Url};
 use configuration::{DatabaseConfiguration, get_configuration};
+use reqwest::{StatusCode, Url};
 use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
 use std::path::PathBuf;
-use telemetry::init_tracing;
-use tokio::net::TcpListener;
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
     matchers::{method, path},
@@ -219,9 +215,15 @@ async fn configure_test_database(settings: &DatabaseConfiguration) -> SqlitePool
 /// 1. Mutates configuration for test needs
 /// 1. Spawns a tokio thread for running the axum server
 pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
-    init_tracing()?;
+    telemetry::init_tracing().context("Failed to initialize tracing.")?;
 
     let email_server = MockServer::start().await;
+
+    let api_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .cookie_store(true)
+        .build()
+        .unwrap();
 
     let config = {
         let mut c = get_configuration().expect("Failed to read Configuration");
@@ -234,53 +236,24 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
         c
     };
 
-    let base_url = format!("{}:{}", config.application.host, config.application.port);
-    let listener = TcpListener::bind(&base_url).await?;
-
-    let address = {
-        let x = listener.local_addr()?;
-        format!("http://{x}")
-    };
-
     let db_pool = configure_test_database(&config.database).await;
-    let email_client = EmailClient::from_config(&config.email_client);
-
-    let api_client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .cookie_store(true)
-        .build()
-        .unwrap();
-
     let test_user = TestUser::generate();
     test_user.store(&db_pool).await;
 
-    let app_state = AppState {
-        db_pool: db_pool.clone(),
-        base_url: address.clone(),
-        email_client,
-    };
+    let app = ApplicationBuilder::new(&config)
+        .with_db_pool(db_pool.clone())
+        .build()
+        .await?;
 
     let test_app = TestApp {
-        address,
+        address: app.address(),
         db_pool,
         email_server,
         api_client,
         test_user,
     };
 
-    let redis_pool = create_redis_pool(&config.redis)
-        .await
-        .context("Failed to initialize redis pool")?;
-
-    let router = get_router(app_state, redis_pool)
-        .await
-        .expect("Failed to get router");
-
-    tokio::spawn(async move {
-        axum::serve(listener, router)
-            .await
-            .expect("Test server failed");
-    });
+    tokio::spawn(async move { app.run().await.unwrap() });
 
     Ok(test_app)
 }
