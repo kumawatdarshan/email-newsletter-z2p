@@ -2,7 +2,9 @@
   pkgs,
   buildInputs,
   nativeBuildInputs,
-}: {
+  services,
+}: let
+in {
   default = pkgs.mkShell {
     inherit buildInputs nativeBuildInputs;
 
@@ -14,6 +16,7 @@
       cargo-hakari
       cargo-expand
       bunyan-rs
+      services
     ];
 
     DATABASE_URL = "sqlite:./data.db";

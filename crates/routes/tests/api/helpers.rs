@@ -256,7 +256,6 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         db_pool: db_pool.clone(),
         base_url: address.clone(),
         email_client,
-        hmac_secret: config.application.hmac_secret.into(),
     };
 
     let test_app = TestApp {
@@ -267,7 +266,7 @@ pub async fn spawn_app_testing() -> Result<TestApp> {
         test_user,
     };
 
-    let router = get_router(app_state);
+    let router = get_router(app_state).await.expect("Failed to get router");
 
     tokio::spawn(async move {
         axum::serve(listener, router)

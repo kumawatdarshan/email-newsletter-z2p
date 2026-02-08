@@ -23,10 +23,9 @@ async fn main() -> Result<()> {
         db_pool,
         email_client,
         base_url,
-        hmac_secret: config.application.hmac_secret.into(),
     };
 
-    let router = get_router(app_state);
+    let router = get_router(app_state).await.expect("Failed to get router");
 
     axum::serve(listener, router)
         .await

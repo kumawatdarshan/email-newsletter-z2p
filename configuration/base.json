@@ -1,15 +1,15 @@
 {
-	"application": {
-		"port": "8000",
-		"hmac_secret": "long-and-very-secret-random-key-needed-to-verify-message-integrity"
-	},
-	"database": {
-		"name": "newsletter"
-	},
-	"email_client": {
-		"base_url": "http://almost-fake-fancy-mail.com/api",
-		"sender_email": "test@gmail.com",
-		"authorization_token": "my-secret-token",
-		"timeout_ms": 10000
-	}
+  "application": {
+    "port": "8000"
+  },
+  "database": {
+    "name": "newsletter"
+  },
+  "email_client": {
+    "base_url": "http://almost-fake-fancy-mail.com/api",
+    "sender_email": "test@gmail.com",
+    "authorization_token": "my-secret-token",
+    "timeout_ms": 10000
+  },
+  "redis_uri": "redis://127.0.0.1:6379"
 }

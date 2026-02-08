@@ -18,7 +18,7 @@ test-subcribe:
 
 test name="":
     @set -euo pipefail
-    cargo nextest run "{{name}}"
+    cargo nextest run "{{ name }}"
 
 check:
     cargo check

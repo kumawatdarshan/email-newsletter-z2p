@@ -14,6 +14,10 @@
     crane = {
       url = "github:ipetkov/crane";
     };
+
+    # Juspay Services flake
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    services-flake.url = "github:juspay/services-flake";
   };
 
   outputs = {
@@ -23,6 +27,8 @@
     flake-utils,
     crane,
     treefmt-nix,
+    process-compose-flake,
+    services-flake,
     ...
   }: let
     meta =
@@ -62,18 +68,17 @@
       };
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-      treefmt = treefmt-nix.lib.evalModule pkgs {
-        projectRootFile = "flake.nix";
-        programs = {
-          alejandra.enable = true;
-          taplo.enable = true;
-          rustfmt.enable = true;
-          jsonfmt.enable = true;
-          just.enable = true;
-        };
-      };
-
+      treefmt = treefmt-nix.lib.evalModule pkgs (import ./nix/treefmt.nix);
       formatter = treefmt.config.build.wrapper;
+
+      # Services flake ceremony
+      pcs = import process-compose-flake.lib {inherit pkgs;};
+      services = pcs.makeProcessCompose {
+        modules = [
+          services-flake.processComposeModules.default
+          (import ./nix/redis.nix)
+        ];
+      };
     in {
       inherit formatter;
 
@@ -91,7 +96,7 @@
       };
 
       devShells = import ./nix/devshell.nix {
-        inherit pkgs;
+        inherit pkgs services;
         inherit (commonArgs) buildInputs nativeBuildInputs;
       };
     });

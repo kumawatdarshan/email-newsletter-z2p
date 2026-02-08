@@ -42,13 +42,19 @@ pub struct Configuration {
     pub database: DatabaseConfiguration,
     pub application: ApplicationConfiguration,
     pub email_client: EmailClientConfiguration,
+    pub redis: RedisConfiguration,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RedisConfiguration {
+    pub port: Port,
+    pub host: SecretString,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ApplicationConfiguration {
     pub port: Port,
     pub host: String,
-    pub hmac_secret: SecretString,
 }
 
 #[derive(Deserialize, Debug)]

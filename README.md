@@ -21,6 +21,7 @@
 
 - Using **Nix flakes** for the entirety of the deployment pipeline.
   - Also Integrating Nix into Github Actions.
+- Brought back services flake for redis. I was doubting between looking for an embeddable db, thought `moka db` would be good enough for my use cases. Alas, was I wrong, while evaluating to choose `moka`, I pondered over the entire reason why I was setting up it now and not relying on the memory store for session. `PERSISTENCE`. (look this)[## 1. Axum-messages store] My tests had been failing because of persistence. 
 
 ### Minor Differences
 1. Cargo Workspace is solely to reduce compile times, The project is not really large enough to require it but the compile times are just so much better now.
