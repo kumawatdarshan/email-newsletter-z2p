@@ -133,7 +133,7 @@ async fn send_confirmation_email(
 ) -> Result<(), anyhow::Error> {
     // TODO: LOGS SHOULD EMIT IF I MISSED A ARG
     let confirmation_link =
-        format!("{base_url}/subscribe/confirm?subscription_token={subscription_token}");
+        format!("{base_url}/subscriptions/confirm?subscription_token={subscription_token}");
 
     let html = format!(
         "Welcome to our newsletter!<br />\

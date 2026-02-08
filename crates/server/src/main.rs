@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
-use routes::get_router;
-use secrecy::ExposeSecret;
-use settings::get_configuration;
+use api::{AppState, get_router};
+use email_client::EmailClient;
+use redis_client::create_redis_pool;
+use configuration::get_configuration;
 use sqlx::SqlitePool;
-use state::{AppState, create_email_client, get_redis};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -18,19 +18,17 @@ async fn main() -> Result<()> {
 
     let db_pool = SqlitePool::connect_lazy_with(config.database.options());
 
-    let email_client = create_email_client(&config);
+    let email_client = EmailClient::from_config(&config.email_client);
 
     let app_state = AppState {
         db_pool,
         email_client,
         base_url,
     };
-    let redis_pool = get_redis(
-        config.redis.host.expose_secret().to_string(),
-        config.redis.port,
-    )
-    .await
-    .context("Failed to initialize redis pool")?;
+
+    let redis_pool = create_redis_pool(&config.redis)
+        .await
+        .context("Failed to initialize redis pool")?;
 
     let router = get_router(app_state, redis_pool)
         .await

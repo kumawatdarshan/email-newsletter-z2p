@@ -83,11 +83,11 @@ tower-sessions-redis-store = { version = "0.16.0", features = [
 
 # Local crates
 
-settings = { path = "crates/settings" }
+configuration = { path = "crates/configuration" }
 telemetry = { path = "crates/telemetry" }
 email-client = { path = "crates/email-client" }
 domain = { path = "crates/domain" }
-state = { path = "crates/state" }
-routes = { path = "crates/routes" }
+redis-client = { path = "crates/redis-client" }
+api = { path = "crates/api" }
 hakari-hack = { path = "crates/hakari-hack" }
 newsletter-macros = { path = "crates/newsletter-macros" }

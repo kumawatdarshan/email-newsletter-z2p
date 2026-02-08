@@ -1,8 +1,9 @@
 use crate::{
-    handle_404,
+    AppState, handle_404,
     health::health_check,
     home,
     login::{login, login_form},
+    middlewares::RequestIdMakeSpan,
     newsletters::publish_newsletter,
     subscriptions::subscribe,
     subscriptions_confirm::confirm,
@@ -12,9 +13,6 @@ use axum::{
     routing::{get, post},
 };
 use axum_messages::MessagesManagerLayer;
-use settings::Port;
-use state::AppState;
-use telemetry::RequestIdMakeSpan;
 use tower::ServiceBuilder;
 use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
 use tower_sessions::{Expiry, SessionManagerLayer, cookie::time::Duration};
@@ -35,8 +33,8 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .route("/", get(home))
         .route("/login", post(login).get(login_form))
         .route("/health", get(health_check))
-        .route("/subscribe", post(subscribe))
-        .route("/subscribe/confirm", get(confirm))
+        .route("/subscriptions", post(subscribe))
+        .route("/subscriptions/confirm", get(confirm))
         .route("/newsletters", post(publish_newsletter))
         // unlike in `actix_session` implementation, we don't need to provide any signing key because cookie has no session data.
         // https://github.com/maxcountryman/tower-sessions/discussions/100

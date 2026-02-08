@@ -1,31 +1,7 @@
 use std::sync::OnceLock;
-
-use axum::http::Request;
-use tower_http::trace::MakeSpan;
-use tracing::{Span, Subscriber, subscriber::set_global_default};
+use tracing::{Subscriber, subscriber::set_global_default};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, Registry, fmt::MakeWriter, layer::SubscriberExt};
-
-#[derive(Clone, Debug)]
-pub struct RequestIdMakeSpan;
-
-impl<B> MakeSpan<B> for RequestIdMakeSpan {
-    fn make_span(&mut self, request: &Request<B>) -> Span {
-        let request_id = request
-            .headers()
-            .get("x-request-id")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("unknown");
-
-        tracing::info_span!(
-            "request",
-            method = %request.method(),
-            uri = %request.uri(),
-            version = ?request.version(),
-            "x-request-id" = %request_id,
-        )
-    }
-}
 
 pub fn get_subscriber<Sink>(
     name: String,
@@ -54,13 +30,6 @@ pub fn init_tracing() -> std::io::Result<()> {
     });
     Ok(())
 }
-// pub fn spawn_blocking<F, R>(f: F) -> JoinHandle<R>
-// where
-//     F: FnOnce() -> R + Send + 'static,
-//     R: Send + 'static,
-// {
-//     crate::runtime::spawn_blocking(f)
-// }
 
 pub fn spawn_blocking_with_tracing<F, R>(f: F) -> tokio::task::JoinHandle<R>
 where

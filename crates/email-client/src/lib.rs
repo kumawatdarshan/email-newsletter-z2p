@@ -52,6 +52,18 @@ impl EmailClient {
 
         Ok(())
     }
+
+    pub fn from_config(config: &configuration::EmailClientConfiguration) -> Self {
+        let sender_email = config.sender().expect("Invalid Sender email");
+        let timeout = config.timeout();
+
+        EmailClient::new(
+            config.base_url.clone(),
+            sender_email,
+            config.authorization_token.clone(),
+            timeout,
+        )
+    }
 }
 
 #[derive(Serialize)]
@@ -123,7 +135,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_email_succesfully_returns_200() {
+    async fn send_email_successfully_returns_200() {
         let mock_server = MockServer::start().await;
         let email_client = email_client(&mock_server.uri());
 

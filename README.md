@@ -36,6 +36,10 @@
 
 # Side Questing
 
+## 1. The REST-full naming
+
+I had a route called `/subscribe`. To me it made sense. But while working on a separate project, I got to know more about REST naming conventions. And why it should have really been `/subscriptions` instead. I am not explaining the intricacies tho. Its widely available on the wide world of web.
+
 ## 1. Axum-messages store
 
 To my understanding, axum-messages rely on a external store impl. One such impl is provided by `tower-sessions` itself, the "MemoryStore". That seemed like the perfect option as the next step should be redis. But I quickly ran into a bad bad problem. 

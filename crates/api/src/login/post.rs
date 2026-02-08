@@ -1,8 +1,4 @@
-use axum::{
-    Form,
-    response::{Redirect, Response},
-};
-use axum_extra::extract::{CookieJar, cookie::Cookie};
+use axum::{Form, response::Redirect};
 use axum_messages::Messages;
 use sqlx::SqlitePool;
 

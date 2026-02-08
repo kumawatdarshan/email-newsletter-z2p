@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 /// - Are we firing the correct endpoint? (/health_check)
 /// - Are we firing the correct request? (GET)
 /// - Is it a successful response? (200)
-/// - Is there any content recieved? (There should not be any)
+/// - Is there any content received? (There should not be any)
 /// ---
 /// ### Although I am honestly not entirely convinced...
 /// If i even need this, I am canonizing it as the author introducing me to integration testing and that i don't actually need this in rust world. could be wrong.

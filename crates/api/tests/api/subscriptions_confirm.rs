@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 async fn confirmations_without_tokens_are_rejected_with_a_400() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
-    let response = reqwest::get(format!("{}/subscribe/confirm", app.address))
+    let response = reqwest::get(format!("{}/subscriptions/confirm", app.address))
         .await
         .unwrap();
 

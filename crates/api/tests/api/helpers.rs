@@ -1,14 +1,14 @@
 use anyhow::Context;
+use api::{AppState, get_router};
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
+use email_client::EmailClient;
+use redis_client::create_redis_pool;
 use reqwest::{StatusCode, Url};
-use routes::get_router;
-use secrecy::ExposeSecret;
-use settings::{DatabaseConfiguration, get_configuration};
+use configuration::{DatabaseConfiguration, get_configuration};
 use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
-use state::{AppState, create_email_client, get_redis};
 use std::path::PathBuf;
 use telemetry::init_tracing;
 use tokio::net::TcpListener;
@@ -69,7 +69,7 @@ impl TestApp {
 
     pub(crate) async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
-            .post(format!("{}/subscribe", &self.address))
+            .post(format!("{}/subscriptions", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
@@ -243,7 +243,7 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
     };
 
     let db_pool = configure_test_database(&config.database).await;
-    let email_client = create_email_client(&config);
+    let email_client = EmailClient::from_config(&config.email_client);
 
     let api_client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -268,12 +268,9 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
         test_user,
     };
 
-    let redis_pool = get_redis(
-        config.redis.host.expose_secret().to_string(),
-        config.redis.port,
-    )
-    .await
-    .context("Failed to initialize redis pool")?;
+    let redis_pool = create_redis_pool(&config.redis)
+        .await
+        .context("Failed to initialize redis pool")?;
 
     let router = get_router(app_state, redis_pool)
         .await
