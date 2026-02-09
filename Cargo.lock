@@ -52,14 +52,12 @@ dependencies = [
  "anyhow",
  "argon2",
  "axum",
- "axum-extra",
  "axum-messages",
  "base64",
  "configuration",
  "domain",
  "email-client",
  "hakari-hack",
- "htmlescape",
  "linkify",
  "newsletter-macros",
  "rand 0.9.2",
@@ -78,7 +76,6 @@ dependencies = [
  "tower-sessions-redis-store",
  "tracing",
  "url",
- "urlencoding",
  "wiremock",
 ]
 
@@ -241,28 +238,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "axum-extra"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fef252edff26ddba56bbcdf2ee3307b8129acb86f5749b68990c168a6fcc9c76"
-dependencies = [
- "axum",
- "axum-core",
- "bytes",
- "cookie",
- "futures-core",
- "futures-util",
- "http",
- "http-body",
- "http-body-util",
- "mime",
- "pin-project-lite",
- "tower-layer",
- "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -440,7 +415,6 @@ dependencies = [
  "domain",
  "dotenvy",
  "hakari-hack",
- "reqwest",
  "secrecy",
  "serde",
  "sqlx",
@@ -766,8 +740,6 @@ dependencies = [
  "hakari-hack",
  "quickcheck",
  "quickcheck_macros",
- "sqlx",
- "tokio",
  "unicode-segmentation",
  "validator",
 ]
@@ -1266,12 +1238,6 @@ checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
  "windows-sys 0.61.2",
 ]
-
-[[package]]
-name = "htmlescape"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9025058dae765dee5070ec375f591e2ba14638c63feff74f13805a72e523163"
 
 [[package]]
 name = "http"
@@ -2521,16 +2487,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "api",
- "axum",
  "configuration",
- "email-client",
  "hakari-hack",
- "redis-client",
- "secrecy",
- "sqlx",
  "telemetry",
  "tokio",
- "tower-sessions-redis-store",
 ]
 
 [[package]]
