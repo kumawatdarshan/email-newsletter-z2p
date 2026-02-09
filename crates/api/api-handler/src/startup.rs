@@ -3,7 +3,7 @@ use axum::Router;
 use configuration::Configuration;
 use email_client::EmailClient;
 use redis_client::create_redis_pool;
-use sqlx::SqlitePool;
+use repository::Repository;
 use tokio::net::TcpListener;
 use tower_sessions_redis_store::fred::prelude::Pool as RedisPool;
 
@@ -32,7 +32,7 @@ impl Application {
 
 pub struct ApplicationBuilder<'a> {
     config: &'a Configuration,
-    db_pool: Option<SqlitePool>,
+    repo: Option<Repository>,
     email_client: Option<EmailClient>,
     redis_pool: Option<RedisPool>,
 }
@@ -41,14 +41,14 @@ impl<'a> ApplicationBuilder<'a> {
     pub fn new(config: &'a Configuration) -> Self {
         Self {
             config,
-            db_pool: None,
+            repo: None,
             email_client: None,
             redis_pool: None,
         }
     }
 
-    pub fn with_db_pool(mut self, pool: SqlitePool) -> Self {
-        self.db_pool = Some(pool);
+    pub fn with_db_pool(mut self, pool: Repository) -> Self {
+        self.repo = Some(pool);
         self
     }
 
@@ -63,9 +63,9 @@ impl<'a> ApplicationBuilder<'a> {
     }
 
     pub async fn build(self) -> anyhow::Result<Application> {
-        let db_pool = match self.db_pool {
-            Some(pool) => pool,
-            None => SqlitePool::connect_lazy_with(self.config.database.options()),
+        let repo = match self.repo {
+            Some(repo) => repo,
+            None => Repository::connect_lazy_with(self.config.database.options()),
         };
 
         let email_client = match self.email_client {
@@ -92,7 +92,7 @@ impl<'a> ApplicationBuilder<'a> {
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
         let app_state = AppState {
-            db_pool,
+            repo,
             email_client,
             base_url,
         };

@@ -4,9 +4,8 @@ use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use rand::{Rng, distr::Alphanumeric};
-use repository::subscriptions::SubscriptionsRepository;
+use repository::{Repository, subscriptions::SubscriptionsRepository};
 use serde::Deserialize;
-use sqlx::SqlitePool;
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {
@@ -48,29 +47,37 @@ pub enum SubscribeError {
 ///   - Sending the confirmation email.
 #[tracing::instrument(
     name = "Adding a new Subscriber",
-    skip(db_pool, email_client, base_url, form)
+    skip(repo, email_client, base_url, form)
 )]
 pub(crate) async fn subscribe(
-    State(db_pool): State<SqlitePool>,
+    State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     State(base_url): State<String>,
     Form(form): Form<FormData>,
 ) -> Result<StatusCode, SubscribeError> {
+    fn generate_subscription_token() -> String {
+        let mut rng = rand::rng();
+        std::iter::repeat_with(|| rng.sample(Alphanumeric))
+            .map(char::from)
+            .take(25)
+            .collect()
+    }
     let new_subscriber = form.try_into().map_err(SubscribeError::ValidationError)?;
 
-    let mut transaction = db_pool
+    let mut transaction = repo
+        .as_ref()
         .begin()
         .await
         .context("Failed to begin database transaction")?;
 
-    let subscriber_id =
-        SubscriptionsRepository::insert_subscriber(&mut transaction, &new_subscriber)
-            .await
-            .context("Failed to insert new subscriber in the database")?;
+    let subscriber_id = repo
+        .insert_subscriber(&mut transaction, &new_subscriber)
+        .await
+        .context("Failed to insert new subscriber in the database")?;
 
     let subscription_token = generate_subscription_token();
 
-    SubscriptionsRepository::store_token(&mut transaction, &subscriber_id, &subscription_token)
+    repo.store_token(&mut transaction, &subscriber_id, &subscription_token)
         .await
         .context("Failed to store the confirmation token for the new subscriber")?;
 
@@ -119,12 +126,4 @@ async fn send_confirmation_email(
         .send_email(&new_subscriber.email, "Welcome!", &html, &plaintext)
         .await
         .context("Failed to send Mail")
-}
-
-fn generate_subscription_token() -> String {
-    let mut rng = rand::rng();
-    std::iter::repeat_with(|| rng.sample(Alphanumeric))
-        .map(char::from)
-        .take(25)
-        .collect()
 }

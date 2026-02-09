@@ -6,8 +6,7 @@ edition.workspace = true
 [dependencies]
 tokio.workspace = true
 anyhow.workspace = true
-
-handler.workspace = true
+api_handler.workspace = true
 configuration.workspace = true
 telemetry.workspace = true
 hakari-hack.workspace = true

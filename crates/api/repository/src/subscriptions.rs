@@ -1,20 +1,34 @@
+use crate::{Repository, Result};
 use domain::NewSubscriber;
 use sqlx::{
     Sqlite, Transaction,
     types::{Uuid, chrono::Utc},
 };
 
-pub struct SubscriptionsRepository;
+pub trait SubscriptionsRepository {
+    fn insert_subscriber(
+        &self,
+        transaction: &mut Transaction<'_, Sqlite>,
+        new_subscriber: &NewSubscriber,
+    ) -> impl std::future::Future<Output = Result<String>> + Send;
+    fn store_token(
+        &self,
+        transaction: &mut Transaction<'_, Sqlite>,
+        subscriber_id: &str,
+        subscription_token: &str,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
+}
 
-impl SubscriptionsRepository {
+impl SubscriptionsRepository for Repository {
     #[tracing::instrument(
         name = "Saving new subscriber details in the database.",
         skip(transaction, new_subscriber)
     )]
-    pub async fn insert_subscriber(
+    async fn insert_subscriber(
+        &self,
         transaction: &mut Transaction<'_, Sqlite>,
         new_subscriber: &NewSubscriber,
-    ) -> Result<String, sqlx::Error> {
+    ) -> Result<String> {
         let subscriber_id = Uuid::new_v4().to_string();
         let email = new_subscriber.email.as_ref();
         let name = new_subscriber.name.as_ref();
@@ -40,11 +54,12 @@ impl SubscriptionsRepository {
         name = "Store subscription token in the database",
         skip(transaction, subscription_token)
     )]
-    pub async fn store_token(
+    async fn store_token(
+        &self,
         transaction: &mut Transaction<'_, Sqlite>,
         subscriber_id: &str,
         subscription_token: &str,
-    ) -> Result<(), sqlx::Error> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
             INSERT INTO subscription_tokens (subscription_token, subscriber_id)

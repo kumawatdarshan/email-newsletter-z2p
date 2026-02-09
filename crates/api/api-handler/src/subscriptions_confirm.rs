@@ -6,9 +6,8 @@ use axum::{
     response::IntoResponse,
 };
 use newsletter_macros::{DebugChain, IntoErrorResponse};
-use repository::subscriptions_confirm::SubscriptionsConfirmRepository;
+use repository::{Repository, subscriptions_confirm::SubscriptionsConfirmRepository};
 use serde::Deserialize;
-use sqlx::SqlitePool;
 
 use crate::ResponseMessage;
 
@@ -28,20 +27,19 @@ pub enum ConfirmationError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
-#[tracing::instrument(name = "Confirm a pending subscriber", skip(db_pool, parameters))]
+#[tracing::instrument(name = "Confirm a pending subscriber", skip(repo, parameters))]
 pub(crate) async fn confirm(
-    State(db_pool): State<SqlitePool>,
+    State(repo): State<Repository>,
     Query(parameters): Query<Parameters>,
 ) -> Result<impl IntoResponse, ConfirmationError> {
-    let subscriber_id = SubscriptionsConfirmRepository::get_subscriber_id_from_token(
-        &db_pool,
-        &parameters.subscription_token,
-    )
-    .await
-    .context("Failed to retrieve subscriber ID from token")?
-    .ok_or(ConfirmationError::InvalidToken)?;
+    let subscriber_id = repo
+        .get_subscriber_id_from_token(&parameters.subscription_token)
+        .await
+        .context("Failed to retrieve subscriber ID from token")?
+        .ok_or(ConfirmationError::InvalidToken)?;
 
-    let was_updated = SubscriptionsConfirmRepository::confirm_subscriber(&db_pool, subscriber_id)
+    let was_updated = repo
+        .confirm_subscriber(subscriber_id)
         .await
         .context("Failed to mark subscriber as confirmed")?;
 

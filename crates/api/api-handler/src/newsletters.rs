@@ -4,11 +4,12 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
-use domain::SubscriberEmail;
+use domain::{ConfirmedSubscriber, SubscriberEmail};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
+use repository::Repository;
+use repository::newsletters::NewsletterRepository;
 use serde::Deserialize;
-use sqlx::SqlitePool;
 
 #[derive(Deserialize)]
 pub struct BodyData {
@@ -17,13 +18,9 @@ pub struct BodyData {
 }
 
 #[derive(Deserialize)]
-pub struct Content {
+struct Content {
     html: String,
     text: String,
-}
-
-struct ConfirmedSubscriber {
-    email: SubscriberEmail,
 }
 
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
@@ -41,12 +38,12 @@ pub enum PublishError {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(body, db_pool,email_client, headers),
+    skip(body, repo, email_client, headers),
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub(crate) async fn publish_newsletter(
     headers: HeaderMap,
-    State(db_pool): State<SqlitePool>,
+    State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     Json(body): Json<BodyData>,
 ) -> Result<impl IntoResponse, PublishError> {
@@ -54,7 +51,7 @@ pub(crate) async fn publish_newsletter(
 
     tracing::Span::current().record("username", tracing::field::display(&credentials.username));
 
-    let user_id = validate_credentials(credentials, &db_pool)
+    let user_id = validate_credentials(&repo, credentials)
         .await
         // because it also makes sql queries which can fail outside the boundary of invalid credentials
         .map_err(|e| match e {
@@ -63,7 +60,7 @@ pub(crate) async fn publish_newsletter(
         })?;
     tracing::Span::current().record("user_id", tracing::field::display(&user_id));
 
-    let subscribers = get_confirmed_subscribers(&db_pool).await?;
+    let subscribers = get_confirmed_subscribers(&repo).await?;
 
     for subscriber in subscribers {
         match subscriber {
@@ -88,24 +85,16 @@ pub(crate) async fn publish_newsletter(
     Ok(StatusCode::OK)
 }
 
-#[tracing::instrument(name = "Get Confirmed Subscribers", skip(pool))]
+#[tracing::instrument(name = "Get Confirmed Subscribers", skip(repo))]
 async fn get_confirmed_subscribers(
-    pool: &SqlitePool,
-) -> Result<Vec<Result<ConfirmedSubscriber, anyhow::Error>>, anyhow::Error> {
-    let rows = sqlx::query!(
-        r#"
-            SELECT email
-            FROM subscriptions
-            WHERE status = 'confirmed'
-        "#
-    )
-    .fetch_all(pool)
-    .await?;
+    repo: &Repository,
+) -> anyhow::Result<Vec<anyhow::Result<ConfirmedSubscriber>>> {
+    let rows = repo.get_confirmed_subscribers_raw().await?;
 
     let confirmed_subscribers = rows
         .into_iter()
         .map(|x| {
-            SubscriberEmail::parse(x.email)
+            SubscriberEmail::parse(x)
                 .map(|email| ConfirmedSubscriber { email })
                 .map_err(|error| anyhow!(error))
         })

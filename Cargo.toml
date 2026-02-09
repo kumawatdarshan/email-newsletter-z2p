@@ -95,8 +95,6 @@ telemetry = { path = "crates/infrastructure/telemetry" }
 email-client = { path = "crates/infrastructure/email-client" }
 domain = { path = "crates/core/domain" }
 redis-client = { path = "crates/infrastructure/redis-client" }
-handler = { path = "crates/api/handler" }
-service = { path = "crates/api/service" }
-repository = { path = "crates/api/repository" }
+api_handler = { path = "crates/api/api-handler" }
 hakari-hack = { path = "crates/hakari-hack" }
 newsletter-macros = { path = "crates/newsletter-macros" }

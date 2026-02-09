@@ -1,9 +1,8 @@
 use axum::{Form, response::Redirect};
-use axum_messages::Messages;
-use sqlx::SqlitePool;
-
 use axum::{extract::State, response::IntoResponse};
+use axum_messages::Messages;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
+use repository::Repository;
 use secrecy::SecretString;
 
 use crate::authentication::{AuthError, Credentials, validate_credentials};
@@ -23,12 +22,12 @@ pub struct FormData {
 }
 
 #[tracing::instrument(
-    skip(form, db_pool, message),
+    skip(form, repo, message),
     fields(username = tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
     message: Messages,
-    State(db_pool): State<SqlitePool>,
+    State(repo): State<Repository>,
     Form(form): Form<FormData>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let credentials = Credentials {
@@ -38,7 +37,7 @@ pub async fn login(
 
     tracing::Span::current().record("username", tracing::field::display(&credentials.username));
 
-    match validate_credentials(credentials, &db_pool).await {
+    match validate_credentials(&repo, credentials).await {
         Ok(user_id) => {
             tracing::Span::current().record("user_id", tracing::field::display(&user_id));
             Ok(Redirect::to("/login").into_response())

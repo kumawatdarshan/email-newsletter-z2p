@@ -3,8 +3,9 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::http::header::HeaderMap;
 use base64::Engine;
+use repository::Repository;
+use repository::authentication::AuthenticationRepository;
 use secrecy::{ExposeSecret, SecretString};
-use sqlx::SqlitePool;
 use std::sync::OnceLock;
 use telemetry::spawn_blocking_with_tracing;
 
@@ -32,12 +33,15 @@ pub(crate) struct Credentials {
 /// If other error: AuthError::UnexpectedError
 #[tracing::instrument(
     name = "Validate Credentials"
-    skip(credentials, pool))]
+    skip(credentials, repo))]
 pub async fn validate_credentials(
+    repo: &Repository,
     credentials: Credentials,
-    pool: &SqlitePool,
 ) -> Result<String, AuthError> {
-    let stored_credentials = get_stored_credentials(&credentials.username, pool).await;
+    let stored_credentials = repo
+        .get_stored_credentials(&credentials.username)
+        .await
+        .context("Failed to perform a query to retrieve stored credentials.");
 
     let (user_id, expected_pw_hash) = match stored_credentials {
         Ok(Some((id, hash))) => (Some(id), hash),
@@ -69,27 +73,6 @@ pub async fn validate_credentials(
     user_id.ok_or_else(|| AuthError::InvalidCredentials(anyhow!("Unknown Username")))
 }
 
-#[tracing::instrument(name = "Get Stored Credentials", skip(username, pool))]
-async fn get_stored_credentials(
-    username: &str,
-    pool: &SqlitePool,
-) -> anyhow::Result<Option<(String, SecretString)>> {
-    let row = sqlx::query!(
-        r#"
-           SELECT user_id, password_hash
-           from users
-           WHERE username = $1
-        "#,
-        username,
-    )
-    .fetch_optional(pool)
-    .await
-    .context("Failed to perform a query to retrieve stored credentials.")?
-    .map(|row| (row.user_id, SecretString::new(row.password_hash.into())));
-
-    Ok(row)
-}
-
 #[tracing::instrument(
     name = "Verify Password Hash"
     skip(expected_pw_hash, pw_candidate))]
@@ -110,7 +93,7 @@ fn verify_password_hash(
 pub(crate) fn basic_authentication(headers: HeaderMap) -> Result<Credentials, AuthError> {
     // This indirect fn is used because `AuthError::UnexpectedError` implements `From` trait for `anyhow::Error`
     // But this is very obviously `AuthError::InvalidCredentials` so in turn I am calling .map_err at this fn's call site
-    // which very conviniently is this super fn `basic_authentication`.
+    // which very conveniently is this super fn `basic_authentication`.
     fn parse_credentials(headers: HeaderMap) -> anyhow::Result<Credentials> {
         let header_value = headers
             .get("Authorization")

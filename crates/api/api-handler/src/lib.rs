@@ -15,8 +15,8 @@ use axum::{
     extract::FromRef,
     http::{StatusCode, Uri},
 };
+use repository::Repository;
 use serde::Serialize;
-use sqlx::SqlitePool;
 use tracing::warn;
 
 // re-exports
@@ -25,7 +25,7 @@ pub use startup::{Application, ApplicationBuilder};
 /// State needed for various services like ~psql~,sqlite, redis, etc
 #[derive(Debug, Clone, FromRef)]
 pub struct AppState {
-    pub db_pool: SqlitePool,
+    pub repo: Repository,
     pub email_client: EmailClient,
     pub base_url: String,
 }

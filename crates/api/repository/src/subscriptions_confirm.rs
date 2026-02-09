@@ -1,20 +1,26 @@
-use sqlx::SqlitePool;
+use crate::{Repository, Result};
 
-pub struct SubscriptionsConfirmRepository;
-
-impl SubscriptionsConfirmRepository {
-    #[tracing::instrument(name = "Mark subscriber as Confirmed", skip(subscriber_id, pool))]
-    pub async fn confirm_subscriber(
-        pool: &SqlitePool,
+pub trait SubscriptionsConfirmRepository {
+    fn confirm_subscriber(
+        &self,
         subscriber_id: String,
-    ) -> Result<bool, sqlx::Error> {
+    ) -> impl std::future::Future<Output = Result<bool>> + Send;
+    fn get_subscriber_id_from_token(
+        &self,
+        subscription_token: &str,
+    ) -> impl std::future::Future<Output = Result<Option<String>>> + Send;
+}
+
+impl SubscriptionsConfirmRepository for Repository {
+    #[tracing::instrument(name = "Mark subscriber as Confirmed", skip(subscriber_id, self))]
+    async fn confirm_subscriber(&self, subscriber_id: String) -> Result<bool> {
         // TODO: ADD TIMESTAMP in schema TO AUTOMATICALLY invalidate token after 24h
         let result = sqlx::query!(
             r#"UPDATE subscriptions SET status = 'confirmed'
            WHERE id = $1 AND status = 'pending_confirmation'"#,
             subscriber_id
         )
-        .execute(pool)
+        .execute(&self.0)
         .await?;
 
         let was_updated = result.rows_affected() > 0;
@@ -33,17 +39,17 @@ impl SubscriptionsConfirmRepository {
         Ok(was_updated)
     }
 
-    #[tracing::instrument(name = "Get subscriber_id from token", skip(pool, subscription_token))]
-    pub async fn get_subscriber_id_from_token(
-        pool: &SqlitePool,
+    #[tracing::instrument(name = "Get subscriber_id from token", skip(self, subscription_token))]
+    async fn get_subscriber_id_from_token(
+        &self,
         subscription_token: &str,
-    ) -> Result<Option<String>, sqlx::Error> {
+    ) -> Result<Option<String>> {
         let result = sqlx::query!(
             r#"SELECT subscriber_id FROM subscription_tokens
            WHERE subscription_token = $1"#,
             subscription_token
         )
-        .fetch_optional(pool)
+        .fetch_optional(&self.0)
         .await?;
 
         Ok(result.map(|r| r.subscriber_id))

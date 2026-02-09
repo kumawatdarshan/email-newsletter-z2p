@@ -1,10 +1,11 @@
 use anyhow::Context;
-use handler::ApplicationBuilder;
+use api_handler::ApplicationBuilder;
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
 use configuration::{DatabaseConfiguration, get_configuration};
+use repository::Repository;
 use reqwest::{StatusCode, Url};
 use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
 use std::path::PathBuf;
@@ -241,7 +242,7 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
     test_user.store(&db_pool).await;
 
     let app = ApplicationBuilder::new(&config)
-        .with_db_pool(db_pool.clone())
+        .with_db_pool(Repository::new(db_pool.clone()))
         .build()
         .await?;
 
