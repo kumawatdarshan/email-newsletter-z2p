@@ -1,18 +1,18 @@
 {
-	"application": {
-		"port": "8000"
-	},
-	"database": {
-		"name": "newsletter"
-	},
-	"email_client": {
-		"base_url": "http://almost-fake-fancy-mail.com/api",
-		"sender_email": "test@gmail.com",
-		"authorization_token": "my-secret-token",
-		"timeout_ms": 10000
-	},
-	"redis": {
-		"host": "127.0.0.1",
-		"port": "6379"
-	}
+  "application": {
+    "port": "8000"
+  },
+  "database": {
+    "name": "newsletter"
+  },
+  "email_client": {
+    "base_url": "http://almost-fake-fancy-mail.com/api",
+    "sender_email": "test@gmail.com",
+    "authorization_token": "my-secret-token",
+    "timeout_ms": 10000
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": "6379"
+  }
 }

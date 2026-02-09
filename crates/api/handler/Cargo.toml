@@ -1,5 +1,5 @@
 [package]
-name = "api"
+name = "handler"
 version.workspace = true
 edition.workspace = true
 
@@ -30,6 +30,8 @@ axum-messages.workspace = true
 tower-sessions.workspace = true
 argon2 = { version = "0.5.3", features = ["std"] }
 tower-sessions-redis-store.workspace = true
+service.workspace = true
+repository.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

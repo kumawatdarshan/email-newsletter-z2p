@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use api::Application;
+use handler::Application;
 use configuration::get_configuration;
 
 #[tokio::main]

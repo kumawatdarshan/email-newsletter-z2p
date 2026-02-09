@@ -4,11 +4,9 @@ use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use rand::{Rng, distr::Alphanumeric};
+use repository::subscriptions::SubscriptionsRepository;
 use serde::Deserialize;
-use sqlx::{
-    Sqlite, SqlitePool, Transaction,
-    types::{Uuid, chrono::Utc},
-};
+use sqlx::SqlitePool;
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {
@@ -65,13 +63,14 @@ pub(crate) async fn subscribe(
         .await
         .context("Failed to begin database transaction")?;
 
-    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
-        .await
-        .context("Failed to insert new subscriber in the database")?;
+    let subscriber_id =
+        SubscriptionsRepository::insert_subscriber(&mut transaction, &new_subscriber)
+            .await
+            .context("Failed to insert new subscriber in the database")?;
 
     let subscription_token = generate_subscription_token();
 
-    store_token(&mut transaction, subscriber_id, &subscription_token)
+    SubscriptionsRepository::store_token(&mut transaction, &subscriber_id, &subscription_token)
         .await
         .context("Failed to store the confirmation token for the new subscriber")?;
 
@@ -90,35 +89,6 @@ pub(crate) async fn subscribe(
     .context("Failed to send a confirmation mail")?;
 
     Ok(StatusCode::CREATED)
-}
-
-#[tracing::instrument(
-    name = "Saving new subscriber details in the database.",
-    skip(transaction, new_subscriber)
-)]
-async fn insert_subscriber(
-    transaction: &mut Transaction<'_, Sqlite>,
-    new_subscriber: &NewSubscriber,
-) -> Result<String, sqlx::Error> {
-    let subscriber_id = Uuid::new_v4().to_string();
-    let email = new_subscriber.email.as_ref();
-    let name = new_subscriber.name.as_ref();
-    let timestamp = Utc::now().to_string();
-
-    sqlx::query!(
-        r#"
-            INSERT INTO subscriptions (id, email,name, subscribed_at, status)
-            VALUES ($1,$2,$3,$4, 'pending_confirmation')
-        "#,
-        subscriber_id,
-        email,
-        name,
-        timestamp
-    )
-    .execute(&mut **transaction)
-    .await?;
-
-    Ok(subscriber_id)
 }
 
 #[tracing::instrument(
@@ -149,29 +119,6 @@ async fn send_confirmation_email(
         .send_email(&new_subscriber.email, "Welcome!", &html, &plaintext)
         .await
         .context("Failed to send Mail")
-}
-
-#[tracing::instrument(
-    name = "Store subscription token in the database",
-    skip(subscription_token, transaction)
-)]
-async fn store_token(
-    transaction: &mut Transaction<'_, Sqlite>,
-    subscriber_id: String,
-    subscription_token: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-            INSERT INTO subscription_tokens (subscription_token, subscriber_id)
-            VALUES ($1, $2)
-        "#,
-        subscription_token,
-        subscriber_id,
-    )
-    .execute(&mut **transaction) // this is some black magic
-    .await?;
-
-    Ok(())
 }
 
 fn generate_subscription_token() -> String {

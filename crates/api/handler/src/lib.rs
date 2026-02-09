@@ -6,7 +6,7 @@ mod middlewares;
 mod newsletters;
 mod routes;
 mod startup;
-mod subscriptions;
+pub mod subscriptions;
 mod subscriptions_confirm;
 use email_client::EmailClient;
 use home::*;

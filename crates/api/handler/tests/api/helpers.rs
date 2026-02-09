@@ -1,5 +1,5 @@
 use anyhow::Context;
-use api::ApplicationBuilder;
+use handler::ApplicationBuilder;
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},

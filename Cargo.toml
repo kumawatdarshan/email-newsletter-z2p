@@ -11,7 +11,14 @@ repository = "https://github.com/kumawatdarshan/email-newsletter-z2p"
 
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+members = [
+  "crates/api/*",
+  "crates/bin/*",
+  "crates/core/*",
+  "crates/infrastructure/*",
+  "crates/hakari-hack",
+  "crates/newsletter-macros"
+]
 
 [profile.dev]
 opt-level = 0
@@ -83,11 +90,13 @@ tower-sessions-redis-store = { version = "0.16.0", features = [
 
 # Local crates
 
-configuration = { path = "crates/configuration" }
-telemetry = { path = "crates/telemetry" }
-email-client = { path = "crates/email-client" }
-domain = { path = "crates/domain" }
-redis-client = { path = "crates/redis-client" }
-api = { path = "crates/api" }
+configuration = { path = "crates/core/configuration" }
+telemetry = { path = "crates/infrastructure/telemetry" }
+email-client = { path = "crates/infrastructure/email-client" }
+domain = { path = "crates/core/domain" }
+redis-client = { path = "crates/infrastructure/redis-client" }
+handler = { path = "crates/api/handler" }
+service = { path = "crates/api/service" }
+repository = { path = "crates/api/repository" }
 hakari-hack = { path = "crates/hakari-hack" }
 newsletter-macros = { path = "crates/newsletter-macros" }
