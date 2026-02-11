@@ -1,8 +1,9 @@
 use anyhow::{Context, anyhow};
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use axum::http::header::HeaderMap;
-use base64::Engine;
+use axum_extra::TypedHeader;
+use axum_extra::headers::Authorization;
+use axum_extra::headers::authorization::Basic;
 use repository::Repository;
 use repository::authentication::AuthenticationRepository;
 use secrecy::{ExposeSecret, SecretString};
@@ -90,46 +91,20 @@ fn verify_password_hash(
         .map_err(AuthError::InvalidCredentials)
 }
 
-pub(crate) fn basic_authentication(headers: HeaderMap) -> Result<Credentials, AuthError> {
-    // This indirect fn is used because `AuthError::UnexpectedError` implements `From` trait for `anyhow::Error`
-    // But this is very obviously `AuthError::InvalidCredentials` so in turn I am calling .map_err at this fn's call site
-    // which very conveniently is this super fn `basic_authentication`.
-    fn parse_credentials(headers: HeaderMap) -> anyhow::Result<Credentials> {
-        let header_value = headers
-            .get("Authorization")
-            .context("The 'Authorization' header was missing")?
-            .to_str()
-            .context("The 'Authorization' header contains invalid UTF8.")?;
+pub(crate) fn basic_authentication(
+    TypedHeader(auth): TypedHeader<Authorization<Basic>>,
+) -> Result<Credentials, AuthError> {
+    let username = auth.username();
+    let password = auth.password();
 
-        let base64encoded_segment = header_value
-            .strip_prefix("Basic ")
-            .context("The authorization scheme is not 'Basic'")?;
-
-        let decoded_bytes = base64::engine::general_purpose::STANDARD
-            .decode(base64encoded_segment)
-            .context("Failed to base64-decode 'Basic' credentials.")?;
-
-        // can this utf8 error still occur
-        // of-course it can, first we only checked for the raw header value, which is base64 encoded.
-        // this time we are checking for the decoded value
-        let decoded_cred =
-            String::from_utf8(decoded_bytes).context("The decoded credential invalid UTF8.")?;
-
-        let mut creds = decoded_cred.splitn(2, ':');
-
-        let username = creds
-            .next()
-            .ok_or_else(|| anyhow!("A username must be provided in 'Basic' auth."))?;
-
-        let password = creds
-            .next()
-            .ok_or_else(|| anyhow!("A password must be provided in 'Basic' auth."))?;
-
-        Ok(Credentials {
-            username: username.into(),
-            password: password.into(),
-        })
+    if username.is_empty() || password.is_empty() {
+        return Err(AuthError::InvalidCredentials(anyhow::anyhow!(
+            "Username or password cannot be empty"
+        )));
     }
 
-    parse_credentials(headers).map_err(AuthError::InvalidCredentials)
+    Ok(Credentials {
+        username: username.into(),
+        password: password.into(),
+    })
 }

@@ -2,8 +2,11 @@ use crate::authentication::{AuthError, basic_authentication, validate_credential
 use anyhow::{Context, anyhow};
 use axum::Json;
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
+use axum_extra::TypedHeader;
+use axum_extra::headers::Authorization;
+use axum_extra::headers::authorization::Basic;
 use domain::{ConfirmedSubscriber, SubscriberEmail};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
@@ -38,16 +41,16 @@ pub enum PublishError {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(body, repo, email_client, headers),
+    skip(body, repo, email_client, auth),
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub(crate) async fn publish_newsletter(
-    headers: HeaderMap,
+    TypedHeader(auth): TypedHeader<Authorization<Basic>>,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     Json(body): Json<BodyData>,
 ) -> Result<impl IntoResponse, PublishError> {
-    let credentials = basic_authentication(headers).map_err(PublishError::AuthError)?;
+    let credentials = basic_authentication(TypedHeader(auth)).map_err(PublishError::AuthError)?;
 
     tracing::Span::current().record("username", tracing::field::display(&credentials.username));
 
