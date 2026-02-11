@@ -1,4 +1,4 @@
-use crate::authentication::{AuthError, Credentials, validate_credentials};
+use crate::middlewares::authentication::{AuthError, Credentials, validate_credentials};
 use crate::routes::routes_path::Login;
 use axum::{Form, response::Redirect};
 use axum::{extract::State, response::IntoResponse};
@@ -10,7 +10,7 @@ use secrecy::SecretString;
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum LoginError {
     #[error("Authentication Failed.")]
-    AuthError(#[source] crate::authentication::AuthError),
+    AuthError(#[source] AuthError),
     #[error("Something went wrong.")]
     UnexpectedError(#[from] anyhow::Error),
 }

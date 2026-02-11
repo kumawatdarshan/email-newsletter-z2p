@@ -3,12 +3,12 @@ use crate::{
     health::health_check,
     home,
     login::{login, login_form},
-    middlewares::RequestIdMakeSpan,
+    middlewares::{RequestIdMakeSpan, authentication::require_authentication},
     newsletters::publish_newsletter,
     subscriptions::subscribe_to_newsletter,
     subscriptions_confirm::subscriptions_confirm,
 };
-use axum::Router;
+use axum::{Router, middleware};
 use axum_extra::routing::RouterExt;
 use axum_messages::MessagesManagerLayer;
 use tower::ServiceBuilder;
@@ -27,18 +27,25 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .with_secure(false)
         .with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
-    let router = Router::new()
+    let protected_routes = Router::new()
+        .typed_post(publish_newsletter)
+        // Add other protected routes here
+        .route_layer(middleware::from_fn_with_state(
+            app_state.repo.clone(), // Extract repo from app_state
+            require_authentication,
+        ));
+
+    let public_routes = Router::new()
         .typed_get(home)
         .typed_post(login)
         .typed_get(login_form)
         .typed_get(health_check)
         .typed_post(subscribe_to_newsletter)
-        .typed_get(subscriptions_confirm)
-        .typed_post(publish_newsletter)
-        // unlike in `actix_session` implementation, we don't need to provide any signing key because cookie has no session data.
-        // https://github.com/maxcountryman/tower-sessions/discussions/100
-        // > tower-sessions doesn't provide signing because no data is stored in the cookie.
-        // > In other words, the cookie value is a pointer to the data stored server side.
+        .typed_get(subscriptions_confirm);
+
+    let router = Router::new()
+        .merge(protected_routes)
+        .merge(public_routes)
         .layer(MessagesManagerLayer)
         .layer(session_layer)
         .layer(request_id_middleware)

@@ -1,13 +1,9 @@
-use crate::authentication::{AuthError, basic_authentication, validate_credentials};
 use crate::routes::routes_path::Newsletters;
 use anyhow::{Context, anyhow};
 use axum::Json;
 use axum::extract::State;
-use axum::http::{StatusCode, header};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum_extra::TypedHeader;
-use axum_extra::headers::Authorization;
-use axum_extra::headers::authorization::Basic;
 use domain::{ConfirmedSubscriber, SubscriberEmail};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
@@ -29,12 +25,6 @@ struct Content {
 
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum PublishError {
-    // this will delegate error to the super::authentication::AuthError
-    #[error("Authentication Failed.")]
-    #[status(StatusCode::UNAUTHORIZED)]
-    #[headers([header::WWW_AUTHENTICATE , r#"Basic realm="publish""#])]
-    AuthError(#[source] crate::authentication::AuthError),
-
     #[error("Something went wrong.")]
     #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
@@ -42,30 +32,15 @@ pub enum PublishError {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(body, repo, email_client, auth_header),
+    skip(body, repo, email_client),
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub(crate) async fn publish_newsletter(
     _: Newsletters,
-    auth_header: Option<TypedHeader<Authorization<Basic>>>,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     Json(body): Json<BodyData>,
 ) -> Result<impl IntoResponse, PublishError> {
-    let credentials = basic_authentication(auth_header).map_err(PublishError::AuthError)?;
-
-    tracing::Span::current().record("username", tracing::field::display(&credentials.username));
-
-    let user_id = validate_credentials(&repo, credentials)
-        .await
-        // because it also makes sql queries which can fail outside the boundary of invalid credentials
-        .map_err(|e| match e {
-            AuthError::InvalidCredentials(_) => PublishError::AuthError(e),
-            AuthError::UnexpectedError(source) => PublishError::UnexpectedError(source),
-        })?;
-
-    tracing::Span::current().record("user_id", tracing::field::display(&user_id));
-
     let subscribers = get_confirmed_subscribers(&repo).await?;
 
     for subscriber in subscribers {

@@ -1,28 +1,64 @@
 use anyhow::{Context, anyhow};
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use axum_extra::TypedHeader;
-use axum_extra::headers::Authorization;
-use axum_extra::headers::authorization::Basic;
-use repository::Repository;
-use repository::authentication::AuthenticationRepository;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
+use axum::{
+    extract::{Request, State},
+    http::{StatusCode, header},
+    middleware::Next,
+    response::Response,
+};
+use axum_extra::{
+    TypedHeader,
+    headers::{Authorization, authorization::Basic},
+};
+use newsletter_macros::IntoErrorResponse;
+use repository::{Repository, authentication::AuthenticationRepository};
 use secrecy::{ExposeSecret, SecretString};
 use std::sync::OnceLock;
 use telemetry::spawn_blocking_with_tracing;
 
-static DUMMY_HASH: OnceLock<SecretString> = OnceLock::new();
+#[derive(Clone)]
+pub struct AuthenticatedUser {
+    pub user_id: String,
+    pub username: String,
+}
 
-// we shouldn't even be implementing IntoResponse for these errors.
-// as they are not part of http req fns
-#[derive(thiserror::Error, Debug)]
+#[axum::debug_middleware]
+pub async fn require_authentication(
+    State(repo): State<Repository>,
+    auth_header: Option<TypedHeader<Authorization<Basic>>>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, AuthError> {
+    let credentials = basic_authentication(auth_header)?;
+
+    tracing::Span::current().record("username", tracing::field::display(&credentials.username));
+
+    let user_id = validate_credentials(&repo, credentials.clone()).await?;
+
+    tracing::Span::current().record("user_id", tracing::field::display(&user_id));
+
+    // Store authenticated user in request extensions
+    request.extensions_mut().insert(AuthenticatedUser {
+        user_id,
+        username: credentials.username,
+    });
+
+    Ok(next.run(request).await)
+}
+
+#[derive(thiserror::Error, Debug, IntoErrorResponse)]
 pub(crate) enum AuthError {
     #[error("Invalid Credentials")]
+    #[status(StatusCode::UNAUTHORIZED)]
+    #[headers([header::WWW_AUTHENTICATE , r#"Basic realm="publish""#])]
     InvalidCredentials(#[source] anyhow::Error),
 
     #[error("Something went wrong.")]
+    #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct Credentials {
     pub(crate) username: String,
     pub(crate) password: SecretString,
@@ -35,10 +71,11 @@ pub(crate) struct Credentials {
 #[tracing::instrument(
     name = "Validate Credentials"
     skip(credentials, repo))]
-pub async fn validate_credentials(
+pub(crate) async fn validate_credentials(
     repo: &Repository,
     credentials: Credentials,
 ) -> Result<String, AuthError> {
+    static DUMMY_HASH: OnceLock<SecretString> = OnceLock::new(); // should this exist outside?? idk
     let stored_credentials = repo
         .get_stored_credentials(&credentials.username)
         .await
@@ -91,7 +128,7 @@ fn verify_password_hash(
         .map_err(AuthError::InvalidCredentials)
 }
 
-pub(crate) fn basic_authentication(
+fn basic_authentication(
     auth_header: Option<TypedHeader<Authorization<Basic>>>,
 ) -> Result<Credentials, AuthError> {
     let TypedHeader(auth) = auth_header
