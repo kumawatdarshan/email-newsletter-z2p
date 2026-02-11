@@ -6,7 +6,7 @@ mod middlewares;
 mod newsletters;
 mod routes;
 mod startup;
-pub mod subscriptions;
+mod subscriptions;
 mod subscriptions_confirm;
 use email_client::EmailClient;
 use home::*;
@@ -20,6 +20,7 @@ use serde::Serialize;
 use tracing::warn;
 
 // re-exports
+pub use routes::routes_path;
 pub use startup::{Application, ApplicationBuilder};
 
 /// State needed for various services like ~psql~,sqlite, redis, etc

@@ -2,7 +2,9 @@ use axum::response::{Html, IntoResponse};
 use axum_messages::Messages;
 use std::fmt::Write;
 
-pub async fn login_form(messages: Messages) -> impl IntoResponse {
+use crate::routes::routes_path::Login;
+
+pub async fn login_form(_: Login, messages: Messages) -> impl IntoResponse {
     fn login_html(error_html: String) -> String {
         format!(
             r#"<!DOCTYPE html>

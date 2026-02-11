@@ -1,5 +1,7 @@
 use crate::helpers::spawn_app_testing;
+use api_handler::routes_path;
 use axum::http::StatusCode;
+use reqwest::Client;
 
 /// # Why this complicated test for something simple as health_check?
 /// This is a **black box test**, meaning it is decoupled(*mostly*) from our codebase.
@@ -18,10 +20,9 @@ use axum::http::StatusCode;
 async fn test_health_check() {
     // Arrange
     let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let client = reqwest::Client::new();
 
-    let response = client
-        .get(format!("{}/health", app.address))
+    let response = Client::new()
+        .get(app.typed_path(routes_path::HealthCheck))
         .send()
         .await
         .expect("failed to send request");

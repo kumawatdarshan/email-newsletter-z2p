@@ -1,11 +1,11 @@
+use crate::authentication::{AuthError, Credentials, validate_credentials};
+use crate::routes::routes_path::Login;
 use axum::{Form, response::Redirect};
 use axum::{extract::State, response::IntoResponse};
 use axum_messages::Messages;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use repository::Repository;
 use secrecy::SecretString;
-
-use crate::authentication::{AuthError, Credentials, validate_credentials};
 
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum LoginError {
@@ -26,6 +26,7 @@ pub struct FormData {
     fields(username = tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
+    _: Login,
     message: Messages,
     State(repo): State<Repository>,
     Form(form): Form<FormData>,

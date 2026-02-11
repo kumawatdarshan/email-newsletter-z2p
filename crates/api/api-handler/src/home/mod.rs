@@ -1,6 +1,9 @@
-use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
+use crate::routes::routes_path::Index;
+use axum::{
+    http::StatusCode,
+    response::{Html, IntoResponse},
+};
 
-pub async fn home() -> impl IntoResponse {
+pub async fn home(_: Index) -> impl IntoResponse {
     (StatusCode::OK, Html(include_str!("./home.html")))
 }

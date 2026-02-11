@@ -7,6 +7,8 @@ use rand::{Rng, distr::Alphanumeric};
 use repository::{Repository, subscriptions::SubscriptionsRepository};
 use serde::Deserialize;
 
+use crate::routes::routes_path::Subscriptions;
+
 #[derive(Deserialize)]
 pub(crate) struct FormData {
     email: String,
@@ -34,7 +36,6 @@ pub enum SubscribeError {
     #[status(StatusCode::INTERNAL_SERVER_ERROR)]
     UnexpectedError(#[from] anyhow::Error),
 }
-
 /// Handles new subscription requests.
 ///
 /// # Responses
@@ -49,7 +50,8 @@ pub enum SubscribeError {
     name = "Adding a new Subscriber",
     skip(repo, email_client, base_url, form)
 )]
-pub(crate) async fn subscribe(
+pub(crate) async fn subscribe_to_newsletter(
+    _: Subscriptions,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     State(base_url): State<String>,

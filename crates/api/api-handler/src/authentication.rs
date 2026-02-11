@@ -92,8 +92,11 @@ fn verify_password_hash(
 }
 
 pub(crate) fn basic_authentication(
-    TypedHeader(auth): TypedHeader<Authorization<Basic>>,
+    auth_header: Option<TypedHeader<Authorization<Basic>>>,
 ) -> Result<Credentials, AuthError> {
+    let TypedHeader(auth) = auth_header
+        .ok_or_else(|| AuthError::InvalidCredentials(anyhow::anyhow!("Missing credentials")))?;
+
     let username = auth.username();
     let password = auth.password();
 

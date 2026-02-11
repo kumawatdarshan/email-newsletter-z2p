@@ -5,13 +5,11 @@ use crate::{
     login::{login, login_form},
     middlewares::RequestIdMakeSpan,
     newsletters::publish_newsletter,
-    subscriptions::subscribe,
-    subscriptions_confirm::confirm,
+    subscriptions::subscribe_to_newsletter,
+    subscriptions_confirm::subscriptions_confirm,
 };
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use axum::Router;
+use axum_extra::routing::RouterExt;
 use axum_messages::MessagesManagerLayer;
 use tower::ServiceBuilder;
 use tower_http::{ServiceBuilderExt, request_id::MakeRequestUuid, trace::TraceLayer};
@@ -30,12 +28,13 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
     let router = Router::new()
-        .route("/", get(home))
-        .route("/login", post(login).get(login_form))
-        .route("/health", get(health_check))
-        .route("/subscriptions", post(subscribe))
-        .route("/subscriptions/confirm", get(confirm))
-        .route("/newsletters", post(publish_newsletter))
+        .typed_get(home)
+        .typed_post(login)
+        .typed_get(login_form)
+        .typed_get(health_check)
+        .typed_post(subscribe_to_newsletter)
+        .typed_get(subscriptions_confirm)
+        .typed_post(publish_newsletter)
         // unlike in `actix_session` implementation, we don't need to provide any signing key because cookie has no session data.
         // https://github.com/maxcountryman/tower-sessions/discussions/100
         // > tower-sessions doesn't provide signing because no data is stored in the cookie.
@@ -47,4 +46,33 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .with_state(app_state);
 
     Ok(router)
+}
+
+pub mod routes_path {
+    use axum_extra::routing::TypedPath;
+    use serde::Deserialize;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/")]
+    pub struct Index;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/health")]
+    pub struct HealthCheck;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/subscriptions")]
+    pub struct Subscriptions;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/subscriptions/confirm")]
+    pub struct SubscriptionsConfirm;
+
+    #[derive(Deserialize, TypedPath)]
+    #[typed_path("/login")]
+    pub struct Login;
+
+    #[derive(Deserialize, TypedPath)]
+    #[typed_path("/newsletters")]
+    pub struct Newsletters;
 }

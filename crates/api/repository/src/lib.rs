@@ -20,7 +20,7 @@ impl AsMut<sqlx::SqlitePool> for Repository {
     }
 }
 
-// TODO: ts is ugly, its so wrong ik it. 
+// TODO: ts is ugly, its so wrong ik it.
 // But idk how to solve it
 // Problem being, the wrapper hiding away functions
 impl Repository {

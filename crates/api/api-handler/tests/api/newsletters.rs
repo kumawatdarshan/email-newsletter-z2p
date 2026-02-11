@@ -1,4 +1,5 @@
 use crate::helpers::{ConfirmationLinks, FakeData, TestApp, spawn_app_testing};
+use api_handler::routes_path;
 use axum::http::StatusCode;
 use sqlx::types::Uuid;
 use wiremock::matchers::{any, method, path};
@@ -110,7 +111,7 @@ async fn requests_missing_auth_are_rejected() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
     let response = reqwest::Client::new()
-        .post(format!("{}/newsletters", app.address))
+        .post(app.typed_path(routes_path::Newsletters))
         .json(&app.fake_newsletter())
         .send()
         .await

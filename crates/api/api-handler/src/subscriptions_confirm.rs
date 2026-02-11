@@ -1,3 +1,4 @@
+use crate::{ResponseMessage, routes::routes_path::SubscriptionsConfirm};
 use anyhow::Context;
 use axum::{
     Json,
@@ -8,8 +9,6 @@ use axum::{
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use repository::{Repository, subscriptions_confirm::SubscriptionsConfirmRepository};
 use serde::Deserialize;
-
-use crate::ResponseMessage;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Parameters {
@@ -28,7 +27,8 @@ pub enum ConfirmationError {
 }
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(repo, parameters))]
-pub(crate) async fn confirm(
+pub(crate) async fn subscriptions_confirm(
+    _: SubscriptionsConfirm,
     State(repo): State<Repository>,
     Query(parameters): Query<Parameters>,
 ) -> Result<impl IntoResponse, ConfirmationError> {

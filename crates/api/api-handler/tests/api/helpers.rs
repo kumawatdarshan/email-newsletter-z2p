@@ -1,9 +1,10 @@
 use anyhow::Context;
-use api_handler::ApplicationBuilder;
+use api_handler::{ApplicationBuilder, routes_path};
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
+use axum_extra::routing::TypedPath;
 use configuration::{DatabaseConfiguration, get_configuration};
 use repository::Repository;
 use reqwest::{StatusCode, Url};
@@ -44,6 +45,15 @@ pub(crate) trait FakeData {
 }
 
 impl TestApp {
+    pub(crate) fn typed_path(&self, path: impl TypedPath) -> Url {
+        let base_url = Url::parse(&self.address)
+            .unwrap_or_else(|err| panic!("Failed to parse base address: {}\n{err}", self.address));
+
+        let path_string = path.to_uri().to_string();
+
+        base_url.join(&path_string).expect("Failed to join path")
+    }
+
     pub(crate) async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
         self.post_newsletters_with_auth(body, &self.test_user.username, &self.test_user.password)
             .await
@@ -56,7 +66,7 @@ impl TestApp {
         password: &str,
     ) -> reqwest::Response {
         self.api_client
-            .post(format!("{}/newsletters", &self.address))
+            .post(self.typed_path(routes_path::Newsletters))
             .json(&body)
             .basic_auth(username, Some(password))
             .send()
@@ -66,7 +76,7 @@ impl TestApp {
 
     pub(crate) async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
-            .post(format!("{}/subscriptions", &self.address))
+            .post(self.typed_path(routes_path::Subscriptions))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
@@ -111,7 +121,7 @@ impl TestApp {
         Body: serde::Serialize,
     {
         self.api_client
-            .post(format!("{}/login", &self.address))
+            .post(self.typed_path(routes_path::Login))
             .form(body)
             .send()
             .await
@@ -120,7 +130,7 @@ impl TestApp {
 
     pub(crate) async fn get_login_html(&self) -> String {
         self.api_client
-            .get(format!("{}/login", &self.address))
+            .get(self.typed_path(routes_path::Login))
             .send()
             .await
             .expect("Failed to execute login html request")

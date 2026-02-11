@@ -15,9 +15,13 @@ publish = false
 
 ### BEGIN HAKARI SECTION
 [dependencies]
-axum-core = { version = "0.5", default-features = false, features = ["tracing"] }
+axum-core = { version = "0.5", default-features = false, features = [
+  "tracing",
+] }
 base64 = { version = "0.22" }
-crypto-common = { version = "0.1", default-features = false, features = ["std"] }
+crypto-common = { version = "0.1", default-features = false, features = [
+  "std",
+] }
 deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "std"] }
 either = { version = "1", features = ["serde"] }
@@ -27,10 +31,20 @@ futures-channel = { version = "0.3", features = ["sink"] }
 futures-sink = { version = "0.3" }
 futures-task = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-getrandom-468e82937335b1c9 = { package = "getrandom", version = "0.3", default-features = false, features = ["std"] }
-getrandom-6f8ce4dd05d13bba = { package = "getrandom", version = "0.2", default-features = false, features = ["std"] }
+getrandom-468e82937335b1c9 = { package = "getrandom", version = "0.3", default-features = false, features = [
+  "std",
+] }
+getrandom-6f8ce4dd05d13bba = { package = "getrandom", version = "0.2", default-features = false, features = [
+  "std",
+] }
 hyper = { version = "1", features = ["full"] }
-hyper-util = { version = "0.1", features = ["http1", "http2", "server", "service", "tokio"] }
+hyper-util = { version = "0.1", features = [
+  "http1",
+  "http2",
+  "server",
+  "service",
+  "tokio",
+] }
 idna = { version = "1" }
 lock_api = { version = "0.4", features = ["serde"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
@@ -40,20 +54,70 @@ percent-encoding = { version = "2" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_core = { version = "0.6", default-features = false, features = ["std"] }
 regex = { version = "1" }
-regex-automata = { version = "0.4", default-features = false, features = ["dfa-build", "dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "std", "unicode"] }
+regex-automata = { version = "0.4", default-features = false, features = [
+  "dfa-build",
+  "dfa-onepass",
+  "hybrid",
+  "meta",
+  "nfa-backtrack",
+  "perf-inline",
+  "perf-literal",
+  "std",
+  "unicode",
+] }
 regex-syntax = { version = "0.8" }
-rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
-rustls-webpki = { version = "0.103", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
+rustls = { version = "0.23", default-features = false, features = [
+  "aws-lc-rs",
+  "aws_lc_rs",
+  "logging",
+  "ring",
+  "std",
+  "tls12",
+] }
+rustls-webpki = { version = "0.103", default-features = false, features = [
+  "aws-lc-rs",
+  "ring",
+  "std",
+] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
 serde_core = { version = "1", features = ["alloc", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 sha2 = { version = "0.10" }
 smallvec = { version = "1", default-features = false, features = ["const_new"] }
-sqlx-core = { version = "0.8", features = ["_rt-tokio", "_tls-rustls-ring-webpki", "any", "chrono", "migrate", "offline", "uuid"] }
-sqlx-sqlite = { version = "0.8", default-features = false, features = ["bundled", "chrono", "migrate", "offline", "uuid"] }
-sync_wrapper = { version = "1", default-features = false, features = ["futures"] }
-time = { version = "0.3", features = ["formatting", "macros", "parsing", "serde"] }
-tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+sqlx-core = { version = "0.8", features = [
+  "_rt-tokio",
+  "_tls-rustls-ring-webpki",
+  "any",
+  "chrono",
+  "migrate",
+  "offline",
+  "uuid",
+] }
+sqlx-sqlite = { version = "0.8", default-features = false, features = [
+  "bundled",
+  "chrono",
+  "migrate",
+  "offline",
+  "uuid",
+] }
+sync_wrapper = { version = "1", default-features = false, features = [
+  "futures",
+] }
+time = { version = "0.3", features = [
+  "formatting",
+  "macros",
+  "parsing",
+  "serde",
+] }
+tokio = { version = "1", features = [
+  "fs",
+  "io-util",
+  "macros",
+  "net",
+  "rt-multi-thread",
+  "sync",
+  "time",
+] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
 tower-sessions-core = { version = "0.14", features = ["axum-core"] }
 tracing = { version = "0.1", features = ["log"] }
@@ -62,10 +126,14 @@ url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 
 [build-dependencies]
-axum-core = { version = "0.5", default-features = false, features = ["tracing"] }
+axum-core = { version = "0.5", default-features = false, features = [
+  "tracing",
+] }
 base64 = { version = "0.22" }
 cc = { version = "1", default-features = false, features = ["parallel"] }
-crypto-common = { version = "0.1", default-features = false, features = ["std"] }
+crypto-common = { version = "0.1", default-features = false, features = [
+  "std",
+] }
 deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "std"] }
 either = { version = "1", features = ["serde"] }
@@ -75,10 +143,20 @@ futures-channel = { version = "0.3", features = ["sink"] }
 futures-sink = { version = "0.3" }
 futures-task = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-getrandom-468e82937335b1c9 = { package = "getrandom", version = "0.3", default-features = false, features = ["std"] }
-getrandom-6f8ce4dd05d13bba = { package = "getrandom", version = "0.2", default-features = false, features = ["std"] }
+getrandom-468e82937335b1c9 = { package = "getrandom", version = "0.3", default-features = false, features = [
+  "std",
+] }
+getrandom-6f8ce4dd05d13bba = { package = "getrandom", version = "0.2", default-features = false, features = [
+  "std",
+] }
 hyper = { version = "1", features = ["full"] }
-hyper-util = { version = "0.1", features = ["http1", "http2", "server", "service", "tokio"] }
+hyper-util = { version = "0.1", features = [
+  "http1",
+  "http2",
+  "server",
+  "service",
+  "tokio",
+] }
 idna = { version = "1" }
 lock_api = { version = "0.4", features = ["serde"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
@@ -88,21 +166,77 @@ percent-encoding = { version = "2" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_core = { version = "0.6", default-features = false, features = ["std"] }
 regex = { version = "1" }
-regex-automata = { version = "0.4", default-features = false, features = ["dfa-build", "dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "std", "unicode"] }
+regex-automata = { version = "0.4", default-features = false, features = [
+  "dfa-build",
+  "dfa-onepass",
+  "hybrid",
+  "meta",
+  "nfa-backtrack",
+  "perf-inline",
+  "perf-literal",
+  "std",
+  "unicode",
+] }
 regex-syntax = { version = "0.8" }
-rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
-rustls-webpki = { version = "0.103", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
+rustls = { version = "0.23", default-features = false, features = [
+  "aws-lc-rs",
+  "aws_lc_rs",
+  "logging",
+  "ring",
+  "std",
+  "tls12",
+] }
+rustls-webpki = { version = "0.103", default-features = false, features = [
+  "aws-lc-rs",
+  "ring",
+  "std",
+] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
 serde_core = { version = "1", features = ["alloc", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 sha2 = { version = "0.10" }
 smallvec = { version = "1", default-features = false, features = ["const_new"] }
-sqlx-core = { version = "0.8", features = ["_rt-tokio", "_tls-rustls-ring-webpki", "any", "chrono", "migrate", "offline", "uuid"] }
-sqlx-sqlite = { version = "0.8", default-features = false, features = ["bundled", "chrono", "migrate", "offline", "uuid"] }
-syn = { version = "2", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
-sync_wrapper = { version = "1", default-features = false, features = ["futures"] }
-time = { version = "0.3", features = ["formatting", "macros", "parsing", "serde"] }
-tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+sqlx-core = { version = "0.8", features = [
+  "_rt-tokio",
+  "_tls-rustls-ring-webpki",
+  "any",
+  "chrono",
+  "migrate",
+  "offline",
+  "uuid",
+] }
+sqlx-sqlite = { version = "0.8", default-features = false, features = [
+  "bundled",
+  "chrono",
+  "migrate",
+  "offline",
+  "uuid",
+] }
+syn = { version = "2", features = [
+  "extra-traits",
+  "fold",
+  "full",
+  "visit",
+  "visit-mut",
+] }
+sync_wrapper = { version = "1", default-features = false, features = [
+  "futures",
+] }
+time = { version = "0.3", features = [
+  "formatting",
+  "macros",
+  "parsing",
+  "serde",
+] }
+tokio = { version = "1", features = [
+  "fs",
+  "io-util",
+  "macros",
+  "net",
+  "rt-multi-thread",
+  "sync",
+  "time",
+] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
 tower-sessions-core = { version = "0.14", features = ["axum-core"] }
 tracing = { version = "0.1", features = ["log"] }

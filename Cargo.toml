@@ -17,7 +17,7 @@ members = [
   "crates/core/*",
   "crates/infrastructure/*",
   "crates/hakari-hack",
-  "crates/newsletter-macros"
+  "crates/newsletter-macros",
 ]
 
 [profile.dev]

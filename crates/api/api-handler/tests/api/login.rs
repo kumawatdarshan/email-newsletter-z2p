@@ -1,3 +1,4 @@
+use api_handler::routes_path;
 use reqwest::StatusCode;
 
 use crate::helpers::FakeData;
@@ -10,7 +11,7 @@ async fn an_error_flash_message_is_sent_on_failure() -> anyhow::Result<()> {
     let login_body = app.fake_invalid_account();
 
     let response = app.post_login(&login_body).await;
-    assert_is_redirect_to(&response, "/login");
+    assert_is_redirect_to(&response, &routes_path::Login.to_string());
 
     let html_page = app.get_login_html().await;
     assert!(
