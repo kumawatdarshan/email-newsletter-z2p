@@ -1,6 +1,7 @@
 pub mod admin_dashboard;
 pub mod authentication;
 pub mod newsletters;
+pub mod signup;
 pub mod subscriptions;
 pub mod subscriptions_confirm;
 

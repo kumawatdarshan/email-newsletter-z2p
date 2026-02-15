@@ -1,38 +1,54 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use tower_sessions::Session;
-
-type Result<T> = core::result::Result<T, tower_sessions::session::Error>;
-
+use tower_sessions::session::Error;
 pub struct TypedSession(Session);
+
+#[derive(Debug, thiserror::Error)]
+pub enum SessionError {
+    #[error("Failed to Insert {0} into session")]
+    InsertionError(#[source] Error),
+    #[error("Failed to Fetch {0} from session")]
+    FetchError(#[source] Error),
+    #[error("Failed to cycle session id")]
+    CycleError(#[source] Error),
+}
+
+type Result<T> = core::result::Result<T, SessionError>;
 
 impl TypedSession {
     const USER_ID_KEY: &'static str = "user_id";
     const USERNAME_KEY: &'static str = "username";
 
     pub async fn cycle_id(&self) -> Result<()> {
-        self.0.cycle_id().await
+        self.0.cycle_id().await.map_err(SessionError::CycleError)
     }
 
     pub async fn get_user_id(&self) -> Result<Option<String>> {
-        self.0.get(Self::USER_ID_KEY).await
+        self.0
+            .get(Self::USER_ID_KEY)
+            .await
+            .map_err(SessionError::FetchError)
     }
 
-    pub async fn insert_user_id(
-        &self,
-        user_id: &str,
-    ) -> std::result::Result<(), tower_sessions::session::Error> {
-        self.0.insert(Self::USER_ID_KEY, &user_id).await
+    pub async fn insert_user_id(&self, user_id: &str) -> Result<()> {
+        self.0
+            .insert(Self::USER_ID_KEY, &user_id)
+            .await
+            .map_err(SessionError::InsertionError)
     }
 
     pub async fn get_username(&self) -> Result<Option<String>> {
-        self.0.get(Self::USERNAME_KEY).await
+        self.0
+            .get(Self::USERNAME_KEY)
+            .await
+            .map_err(SessionError::FetchError)
     }
 
-    pub async fn insert_username(
-        &self,
-        username: &str,
-    ) -> std::result::Result<(), tower_sessions::session::Error> {
-        self.0.insert(Self::USERNAME_KEY, &username).await
+    pub async fn insert_username(&self, username: &str) -> Result<()> {
+        self.0
+            .insert(Self::USERNAME_KEY, &username)
+            .await
+            .map_err(SessionError::InsertionError)
     }
 }
 
@@ -50,4 +66,12 @@ where
 
         Ok(Self(session))
     }
+}
+
+// since this is just a convenience wrapper, its not in impl
+pub async fn save_session(session: &TypedSession, user_id: &str, username: &str) -> Result<()> {
+    session.insert_user_id(user_id).await?;
+    session.insert_username(username).await?;
+
+    Ok(())
 }

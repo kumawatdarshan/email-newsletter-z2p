@@ -7,6 +7,7 @@ use crate::{
     login::{login, login_form},
     middlewares::RequestIdMakeSpan,
     newsletters::publish_newsletter,
+    signup::signup,
     subscriptions::subscribe_to_newsletter,
     subscriptions_confirm::subscriptions_confirm,
 };
@@ -30,6 +31,7 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
     let router = Router::new()
+        .typed_post(signup)
         .typed_post(publish_newsletter)
         .typed_get(admin_dashboard)
         .typed_post(login)
@@ -78,4 +80,8 @@ pub mod routes_path {
     #[derive(Deserialize, TypedPath)]
     #[typed_path("/admin/dashboard")]
     pub struct AdminDashboard;
+
+    #[derive(Deserialize, TypedPath)]
+    #[typed_path("/signup")]
+    pub struct SignUp;
 }

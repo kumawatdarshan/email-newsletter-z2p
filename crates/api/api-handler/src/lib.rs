@@ -25,6 +25,7 @@ use tracing::warn;
 // re-exports
 pub use routes::routes_path;
 pub use startup::{Application, ApplicationBuilder};
+pub use utils::auth_extractors::AuthenticatedUser;
 
 /// State needed for various services like ~psql~,sqlite, redis, etc
 #[derive(Debug, Clone, FromRef)]

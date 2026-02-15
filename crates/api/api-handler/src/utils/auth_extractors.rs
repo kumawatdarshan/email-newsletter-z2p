@@ -1,7 +1,7 @@
 use super::authentication::validate_credentials;
-use crate::routes_path::Login;
 use crate::session_state::TypedSession;
-use anyhow::anyhow;
+use crate::{routes_path::Login, session_state::save_session};
+use anyhow::{Context, anyhow};
 use axum::{
     extract::{FromRef, FromRequestParts},
     http::{StatusCode, header},
@@ -128,7 +128,9 @@ where
     let repo = Repository::from_ref(state);
     let user_id = validate_credentials(&repo, credentials).await?;
 
-    save_session(session, &user_id, &username).await?;
+    save_session(&session, &user_id, &username)
+        .await
+        .context("Failed to save session.")?;
 
     Ok(AuthenticatedUser { user_id, username })
 }
@@ -152,21 +154,4 @@ fn basic_authentication(
         username: username.into(),
         password: password.into(),
     })
-}
-
-pub async fn save_session(
-    session: TypedSession,
-    user_id: &str,
-    username: &str,
-) -> Result<(), AuthError> {
-    session
-        .insert_user_id(user_id)
-        .await
-        .map_err(|e| AuthError::UnexpectedError(e.into()))?;
-    session
-        .insert_username(username)
-        .await
-        .map_err(|e| AuthError::UnexpectedError(e.into()))?;
-
-    Ok(())
 }

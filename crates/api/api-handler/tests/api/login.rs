@@ -1,9 +1,7 @@
-use api_handler::routes_path;
-use reqwest::StatusCode;
-
 use crate::helpers::FakeData;
 use crate::helpers::assert_is_redirect_to;
 use crate::helpers::spawn_app_testing;
+use api_handler::routes_path;
 
 #[tokio::test]
 async fn an_error_flash_message_is_sent_on_failure() -> anyhow::Result<()> {

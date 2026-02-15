@@ -1,6 +1,6 @@
 use crate::routes_path::{AdminDashboard, Login};
-use crate::session_state::TypedSession;
-use crate::utils::auth_extractors::{AuthError, Credentials, save_session};
+use crate::session_state::{TypedSession, save_session};
+use crate::utils::auth_extractors::{AuthError, Credentials};
 use crate::utils::authentication::validate_credentials;
 use anyhow::Context;
 use axum::{Form, response::Redirect};
@@ -53,7 +53,9 @@ pub async fn login(
             .await
             .context("Failed to cycle session ID.")?;
 
-        save_session(session, &user_id, &username).await?;
+        save_session(&session, &user_id, &username)
+            .await
+            .context("Failed to save session")?;
 
         Ok(user_id)
     }
