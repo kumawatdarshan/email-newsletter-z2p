@@ -10,7 +10,7 @@ async fn an_error_flash_message_is_sent_on_failure() -> anyhow::Result<()> {
     let login_body = app.fake_invalid_account();
 
     let response = app.post_login(&login_body).await;
-    assert_is_redirect_to(&response, &routes_path::Login.to_string());
+    assert_is_redirect_to(&response, routes_path::LOGIN);
 
     let html_page = app.get_login_html().await;
     assert!(
@@ -39,7 +39,7 @@ async fn redirect_to_admin_dashboard_on_login_success() -> anyhow::Result<()> {
 
     let response = app.post_login(&login_body).await;
 
-    assert_is_redirect_to(&response, &routes_path::AdminDashboard.to_string());
+    assert_is_redirect_to(&response, routes_path::ADMIN_DASHBOARD);
 
     let html_page = app.get_admin_dashboard_html().await;
     println!("{html_page}");

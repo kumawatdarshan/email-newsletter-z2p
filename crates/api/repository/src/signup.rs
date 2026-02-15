@@ -1,5 +1,4 @@
 use argon2::Argon2;
-use argon2::Params;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use secrecy::ExposeSecret;
@@ -37,14 +36,10 @@ impl SignUpRepository for Repository {
         let user_id = Uuid::new_v4().to_string();
 
         let salt = SaltString::generate(&mut OsRng);
-        let pw_hash = Argon2::new(
-            argon2::Algorithm::Argon2id,
-            argon2::Version::V0x13,
-            Params::new(15000, 2, 1, None).unwrap(),
-        )
-        .hash_password(password.expose_secret().as_bytes(), &salt)
-        .unwrap()
-        .to_string();
+        let pw_hash = Argon2::default()
+            .hash_password(password.expose_secret().as_bytes(), &salt)
+            .unwrap()
+            .to_string();
 
         match sqlx::query!(
             r#"

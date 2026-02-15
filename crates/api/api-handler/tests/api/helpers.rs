@@ -1,13 +1,12 @@
 use anyhow::Context;
 use api_handler::{
     ApplicationBuilder,
-    routes_path::{self, AdminDashboard},
+    routes_path::{self, ADMIN_DASHBOARD, ADMIN_PASSWORD, LOGIN},
 };
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
-use axum_extra::routing::TypedPath;
 use configuration::{DatabaseConfiguration, get_configuration};
 use repository::Repository;
 use reqwest::{StatusCode, Url};
@@ -48,13 +47,11 @@ pub(crate) trait FakeData {
 }
 
 impl TestApp {
-    pub(crate) fn typed_path(&self, path: impl TypedPath) -> Url {
+    pub(crate) fn typed_path(&self, path: &str) -> Url {
         let base_url = Url::parse(&self.address)
             .unwrap_or_else(|err| panic!("Failed to parse base address: {}\n{err}", self.address));
 
-        let path_string = path.to_string();
-
-        base_url.join(&path_string).expect("Failed to join path")
+        base_url.join(path).expect("Failed to join path")
     }
 
     pub(crate) async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
@@ -69,7 +66,7 @@ impl TestApp {
         password: &str,
     ) -> reqwest::Response {
         self.api_client
-            .post(self.typed_path(routes_path::Newsletters))
+            .post(self.typed_path(routes_path::NEWSLETTERS))
             .json(&body)
             .basic_auth(username, Some(password))
             .send()
@@ -79,7 +76,7 @@ impl TestApp {
 
     pub(crate) async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
-            .post(self.typed_path(routes_path::Subscriptions))
+            .post(self.typed_path(routes_path::SUBSCRIPTIONS))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
@@ -124,7 +121,7 @@ impl TestApp {
         Body: serde::Serialize,
     {
         self.api_client
-            .post(self.typed_path(routes_path::Login))
+            .post(self.typed_path(routes_path::LOGIN))
             .form(body)
             .send()
             .await
@@ -133,15 +130,39 @@ impl TestApp {
 
     pub async fn get_admin_dashboard(&self) -> reqwest::Response {
         self.api_client
-            .get(self.typed_path(AdminDashboard))
+            .get(self.typed_path(ADMIN_DASHBOARD))
             .send()
             .await
             .expect("Failed to execute /admin/dashboard")
     }
 
+    pub async fn get_change_password(&self) -> reqwest::Response {
+        self.api_client
+            .get(self.typed_path(ADMIN_PASSWORD))
+            .send()
+            .await
+            .expect("Failed to execute /admin/password")
+    }
+
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password().await.text().await.unwrap()
+    }
+
+    pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        self.api_client
+            .post(self.typed_path(ADMIN_PASSWORD))
+            .form(body)
+            .send()
+            .await
+            .expect("Failed to post {ADMIN_PASSWORD}.")
+    }
+
     pub(crate) async fn get_login_html(&self) -> String {
         self.api_client
-            .get(self.typed_path(routes_path::Login))
+            .get(self.typed_path(LOGIN))
             .send()
             .await
             .expect("Failed to execute login html request")
@@ -152,7 +173,7 @@ impl TestApp {
 
     pub(crate) async fn get_admin_dashboard_html(&self) -> String {
         self.api_client
-            .get(self.typed_path(routes_path::AdminDashboard))
+            .get(self.typed_path(ADMIN_DASHBOARD))
             .send()
             .await
             .expect("Failed to execute /admin/dashboard html request")

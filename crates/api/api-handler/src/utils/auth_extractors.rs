@@ -1,6 +1,6 @@
 use super::authentication::validate_credentials;
 use crate::session_state::TypedSession;
-use crate::{routes_path::Login, session_state::save_session};
+use crate::{routes_path::LOGIN, session_state::save_session};
 use anyhow::{Context, anyhow};
 use axum::{
     extract::{FromRef, FromRequestParts},
@@ -33,30 +33,11 @@ pub(crate) struct Credentials {
     pub(crate) password: SecretString,
 }
 
+/// You must have repo as extractor to use this
 #[derive(Clone, Debug)]
 pub struct AuthenticatedUser {
     pub user_id: String,
     pub username: String,
-}
-
-pub struct RequireAuth(pub AuthenticatedUser);
-
-impl<S> FromRequestParts<S> for RequireAuth
-where
-    S: Send + Sync,
-    Repository: FromRef<S>,
-{
-    type Rejection = Response;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        match AuthenticatedUser::from_request_parts(parts, state).await {
-            Ok(user) => Ok(RequireAuth(user)),
-            Err(_) => Err(Redirect::to(&Login.to_string()).into_response()),
-        }
-    }
 }
 
 impl<S> axum::extract::FromRequestParts<S> for AuthenticatedUser
@@ -88,6 +69,26 @@ where
         Err(AuthError::InvalidCredentials(anyhow!(
             "No valid credentials provided"
         )))
+    }
+}
+
+pub struct RequireAuth(pub AuthenticatedUser);
+
+impl<S> FromRequestParts<S> for RequireAuth
+where
+    S: Send + Sync,
+    Repository: FromRef<S>,
+{
+    type Rejection = Response;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        match AuthenticatedUser::from_request_parts(parts, state).await {
+            Ok(user) => Ok(RequireAuth(user)),
+            Err(_) => Err(Redirect::to(LOGIN).into_response()),
+        }
     }
 }
 

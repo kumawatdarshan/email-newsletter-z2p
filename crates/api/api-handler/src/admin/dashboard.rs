@@ -1,13 +1,8 @@
+use crate::utils::auth_extractors::RequireAuth;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
-use crate::routes::routes_path::AdminDashboard;
-use crate::utils::auth_extractors::RequireAuth;
-
-pub async fn admin_dashboard(
-    _: AdminDashboard,
-    RequireAuth(user): RequireAuth,
-) -> Result<Response, Response> {
+pub async fn admin_dashboard(RequireAuth(user): RequireAuth) -> Result<Response, Response> {
     let username = user.username;
 
     let html = format!(
@@ -21,7 +16,12 @@ pub async fn admin_dashboard(
 </head>
 
 <body>
-  <h1>Welcome! {username}</h1>
+    <h1>Welcome! {username}</h1>
+
+    <p>Available actions:</p>
+    <ol>
+        <li><a href="/admin/password">Change password</a></li>
+    </ol>
 </body>
 
 </html>

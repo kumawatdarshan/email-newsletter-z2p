@@ -1,4 +1,4 @@
-use crate::routes_path::{AdminDashboard, Login};
+use crate::routes_path::{ADMIN_DASHBOARD, LOGIN};
 use crate::session_state::{TypedSession, save_session};
 use anyhow::Context;
 use axum::{Form, response::Redirect};
@@ -31,7 +31,6 @@ pub struct SignUpFormData {
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub async fn signup(
-    _: Login,
     session: TypedSession,
     flash: Messages,
     State(repo): State<Repository>,
@@ -75,11 +74,11 @@ pub async fn signup(
     match try_response {
         Err(e) => {
             flash.error(e.to_string());
-            Err(Redirect::to(&Login.to_string()))
+            Err(Redirect::to(LOGIN))
         }
         Ok(_) => {
             flash.success("Account created successfully!");
-            Ok(Redirect::to(&AdminDashboard.to_string()))
+            Ok(Redirect::to(ADMIN_DASHBOARD))
         }
     }
 }

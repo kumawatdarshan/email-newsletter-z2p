@@ -22,7 +22,7 @@ async fn test_health_check() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
     let response = Client::new()
-        .get(app.typed_path(routes_path::HealthCheck))
+        .get(app.typed_path(routes_path::HEALTH_CHECK))
         .send()
         .await
         .expect("failed to send request");

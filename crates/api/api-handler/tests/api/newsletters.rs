@@ -111,7 +111,7 @@ async fn requests_missing_auth_are_rejected() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
     let response = reqwest::Client::new()
-        .post(app.typed_path(routes_path::Newsletters))
+        .post(app.typed_path(routes_path::NEWSLETTERS))
         .json(&app.fake_newsletter())
         .send()
         .await

@@ -1,4 +1,4 @@
-use api_handler::routes_path::Login;
+use api_handler::routes_path::LOGIN;
 
 use crate::helpers::{assert_is_redirect_to, spawn_app_testing};
 
@@ -8,5 +8,5 @@ async fn must_be_logged_in_to_access_admin_dashboard() {
 
     let response = app.get_admin_dashboard().await;
 
-    assert_is_redirect_to(&response, &Login.to_string());
+    assert_is_redirect_to(&response, LOGIN);
 }

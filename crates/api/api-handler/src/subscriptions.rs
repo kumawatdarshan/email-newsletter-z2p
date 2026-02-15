@@ -7,7 +7,6 @@ use rand::{Rng, distr::Alphanumeric};
 use repository::{Repository, subscriptions::SubscriptionsRepository};
 use serde::Deserialize;
 
-use crate::routes::routes_path::Subscriptions;
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {
@@ -51,7 +50,6 @@ pub enum SubscribeError {
     skip(repo, email_client, base_url, form)
 )]
 pub(crate) async fn subscribe_to_newsletter(
-    _: Subscriptions,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     State(base_url): State<String>,

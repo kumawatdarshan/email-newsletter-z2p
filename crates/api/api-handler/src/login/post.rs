@@ -1,4 +1,4 @@
-use crate::routes_path::{AdminDashboard, Login};
+use crate::routes::routes_path::{ADMIN_DASHBOARD, LOGIN};
 use crate::session_state::{TypedSession, save_session};
 use crate::utils::auth_extractors::{AuthError, Credentials};
 use crate::utils::authentication::validate_credentials;
@@ -29,7 +29,6 @@ pub struct LoginFormData {
     fields(username = tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
-    _: Login,
     session: TypedSession,
     flash: Messages,
     State(repo): State<Repository>,
@@ -63,8 +62,8 @@ pub async fn login(
 
     if let Err(e) = try_response {
         flash.error(e.to_string());
-        Err(Redirect::to(&Login.to_string()))
+        Err(Redirect::to(LOGIN))
     } else {
-        Ok(Redirect::to(&AdminDashboard.to_string()))
+        Ok(Redirect::to(ADMIN_DASHBOARD))
     }
 }
