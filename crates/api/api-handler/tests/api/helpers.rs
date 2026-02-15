@@ -1,5 +1,8 @@
 use anyhow::Context;
-use api_handler::{ApplicationBuilder, routes_path};
+use api_handler::{
+    ApplicationBuilder,
+    routes_path::{self, AdminDashboard},
+};
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
@@ -49,7 +52,7 @@ impl TestApp {
         let base_url = Url::parse(&self.address)
             .unwrap_or_else(|err| panic!("Failed to parse base address: {}\n{err}", self.address));
 
-        let path_string = path.to_uri().to_string();
+        let path_string = path.to_string();
 
         base_url.join(&path_string).expect("Failed to join path")
     }
@@ -128,12 +131,31 @@ impl TestApp {
             .expect("Failed to post login.")
     }
 
+    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
+        self.api_client
+            .get(self.typed_path(AdminDashboard))
+            .send()
+            .await
+            .expect("Failed to execute /admin/dashboard")
+    }
+
     pub(crate) async fn get_login_html(&self) -> String {
         self.api_client
             .get(self.typed_path(routes_path::Login))
             .send()
             .await
             .expect("Failed to execute login html request")
+            .text()
+            .await
+            .unwrap()
+    }
+
+    pub(crate) async fn get_admin_dashboard_html(&self) -> String {
+        self.api_client
+            .get(self.typed_path(routes_path::AdminDashboard))
+            .send()
+            .await
+            .expect("Failed to execute /admin/dashboard html request")
             .text()
             .await
             .unwrap()
@@ -267,4 +289,9 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
     tokio::spawn(async move { app.run().await.unwrap() });
 
     Ok(test_app)
+}
+
+pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers().get("Location").unwrap(), location);
 }

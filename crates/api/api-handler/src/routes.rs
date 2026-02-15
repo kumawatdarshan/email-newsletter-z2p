@@ -1,14 +1,16 @@
 use crate::{
-    AppState, handle_404,
+    AppState,
+    admin::admin_dashboard,
+    handle_404,
     health::health_check,
     home,
     login::{login, login_form},
-    middlewares::{RequestIdMakeSpan, authentication::require_authentication},
+    middlewares::RequestIdMakeSpan,
     newsletters::publish_newsletter,
     subscriptions::subscribe_to_newsletter,
     subscriptions_confirm::subscriptions_confirm,
 };
-use axum::{Router, middleware};
+use axum::Router;
 use axum_extra::routing::RouterExt;
 use axum_messages::MessagesManagerLayer;
 use tower::ServiceBuilder;
@@ -27,25 +29,15 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .with_secure(false)
         .with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
-    let protected_routes = Router::new()
+    let router = Router::new()
         .typed_post(publish_newsletter)
-        // Add other protected routes here
-        .route_layer(middleware::from_fn_with_state(
-            app_state.repo.clone(), // Extract repo from app_state
-            require_authentication,
-        ));
-
-    let public_routes = Router::new()
-        .typed_get(home)
+        .typed_get(admin_dashboard)
         .typed_post(login)
+        .typed_get(home)
         .typed_get(login_form)
         .typed_get(health_check)
         .typed_post(subscribe_to_newsletter)
-        .typed_get(subscriptions_confirm);
-
-    let router = Router::new()
-        .merge(protected_routes)
-        .merge(public_routes)
+        .typed_get(subscriptions_confirm)
         .layer(MessagesManagerLayer)
         .layer(session_layer)
         .layer(request_id_middleware)
@@ -82,4 +74,8 @@ pub mod routes_path {
     #[derive(Deserialize, TypedPath)]
     #[typed_path("/newsletters")]
     pub struct Newsletters;
+
+    #[derive(Deserialize, TypedPath)]
+    #[typed_path("/admin/dashboard")]
+    pub struct AdminDashboard;
 }

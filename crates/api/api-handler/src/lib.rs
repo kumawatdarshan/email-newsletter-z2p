@@ -1,12 +1,16 @@
+mod admin;
 mod health;
 mod home;
 mod login;
 mod middlewares;
 mod newsletters;
 mod routes;
+mod session_state;
+mod signup;
 mod startup;
 mod subscriptions;
 mod subscriptions_confirm;
+mod utils;
 use email_client::EmailClient;
 use home::*;
 

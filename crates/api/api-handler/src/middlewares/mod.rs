@@ -1,4 +1,3 @@
-pub mod authentication;
 mod extract_request_id;
 
 // re-exports

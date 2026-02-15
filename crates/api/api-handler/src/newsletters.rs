@@ -1,14 +1,10 @@
-use crate::routes::routes_path::Newsletters;
+use crate::{routes::routes_path::Newsletters, utils::auth_extractors::AuthenticatedUser};
 use anyhow::{Context, anyhow};
-use axum::Json;
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use domain::{ConfirmedSubscriber, SubscriberEmail};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
-use repository::Repository;
-use repository::newsletters::NewsletterRepository;
+use repository::{Repository, newsletters::NewsletterRepository};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -37,6 +33,7 @@ pub enum PublishError {
 )]
 pub(crate) async fn publish_newsletter(
     _: Newsletters,
+    _: AuthenticatedUser,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     Json(body): Json<BodyData>,

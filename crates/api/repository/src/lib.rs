@@ -1,3 +1,4 @@
+pub mod admin_dashboard;
 pub mod authentication;
 pub mod newsletters;
 pub mod subscriptions;

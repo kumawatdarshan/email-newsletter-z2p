@@ -1,5 +1,8 @@
-use crate::middlewares::authentication::{AuthError, Credentials, validate_credentials};
-use crate::routes::routes_path::Login;
+use crate::routes_path::{AdminDashboard, Login};
+use crate::session_state::TypedSession;
+use crate::utils::auth_extractors::{AuthError, Credentials, save_session};
+use crate::utils::authentication::validate_credentials;
+use anyhow::Context;
 use axum::{Form, response::Redirect};
 use axum::{extract::State, response::IntoResponse};
 use axum_messages::Messages;
@@ -10,48 +13,56 @@ use secrecy::SecretString;
 #[derive(thiserror::Error, IntoErrorResponse, DebugChain)]
 pub enum LoginError {
     #[error("Authentication Failed.")]
-    AuthError(#[source] AuthError),
+    AuthError(#[from] AuthError),
     #[error("Something went wrong.")]
     UnexpectedError(#[from] anyhow::Error),
 }
 
 #[derive(serde::Deserialize)]
-pub struct FormData {
+pub struct LoginFormData {
     username: String,
     password: SecretString,
 }
 
 #[tracing::instrument(
-    skip(form, repo, message),
+    skip(form, repo, flash, session),
     fields(username = tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
     _: Login,
-    message: Messages,
+    session: TypedSession,
+    flash: Messages,
     State(repo): State<Repository>,
-    Form(form): Form<FormData>,
+    Form(form): Form<LoginFormData>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let credentials = Credentials {
-        username: form.username,
-        password: form.password,
-    };
+    // this is to simplify and consolidate the happy path
+    // I am propagating errors here so my error path at bottom of this variable handler can deal with that.
+    let try_response: Result<_, LoginError> = async move {
+        let credentials = Credentials {
+            username: form.username,
+            password: form.password,
+        };
 
-    tracing::Span::current().record("username", tracing::field::display(&credentials.username));
+        let username = credentials.username.clone();
+        tracing::Span::current().record("username", tracing::field::display(&username));
+        let user_id = validate_credentials(&repo, credentials).await?;
+        tracing::Span::current().record("user_id", tracing::field::display(&user_id));
 
-    match validate_credentials(&repo, credentials).await {
-        Ok(user_id) => {
-            tracing::Span::current().record("user_id", tracing::field::display(&user_id));
-            Ok(Redirect::to("/login").into_response())
-        }
-        Err(e) => {
-            let e = match e {
-                AuthError::InvalidCredentials(_) => LoginError::AuthError(e),
-                AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
-            };
+        session
+            .cycle_id()
+            .await
+            .context("Failed to cycle session ID.")?;
 
-            message.error(e.to_string());
+        save_session(session, &user_id, &username).await?;
 
-            Err(Redirect::to("/login").into_response())
-        }
+        Ok(user_id)
+    }
+    .await;
+
+    if let Err(e) = try_response {
+        flash.error(e.to_string());
+        Err(Redirect::to(&Login.to_string()))
+    } else {
+        Ok(Redirect::to(&AdminDashboard.to_string()))
     }
 }
