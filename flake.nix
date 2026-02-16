@@ -81,6 +81,18 @@
           (import ./nix/redis.nix)
         ];
       };
+
+      gitHooksLib = git-hooks.lib.${system};
+      preCommitCheck = gitHooksLib.run {
+        src = self;
+        package = pkgs.prek;
+        hooks = {
+          treefmt = {
+            enable = true;
+            package = formatter;
+          };
+        };
+      };
     in {
       inherit formatter;
 
@@ -93,14 +105,13 @@
           craneLib
           commonArgs
           cargoArtifacts
-          formatter
           ;
-        gitHooksLib = git-hooks.lib.${system};
       };
 
       devShells = import ./nix/devshell.nix {
         inherit pkgs services;
         inherit (commonArgs) buildInputs nativeBuildInputs;
+        inherit preCommitCheck;
       };
     });
 }

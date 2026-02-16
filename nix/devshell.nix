@@ -3,6 +3,7 @@
   buildInputs,
   nativeBuildInputs,
   services,
+  preCommitCheck,
 }: let
 in {
   default = pkgs.mkShell {
@@ -20,5 +21,7 @@ in {
     ];
 
     DATABASE_URL = "sqlite:./data.db";
+
+    shellHook = preCommitCheck.shellHook;
   };
 }
