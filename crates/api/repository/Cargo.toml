@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 sqlx.workspace = true
 domain.workspace = true
-tracing.workspace = true # debatable, i will figure out later.
+tracing.workspace = true                           # debatable, i will figure out later.
 secrecy.workspace = true
 argon2 = { version = "0.5.3", features = ["std"] }
 thiserror.workspace = true

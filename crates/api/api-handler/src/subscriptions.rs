@@ -7,7 +7,6 @@ use rand::{Rng, distr::Alphanumeric};
 use repository::{Repository, subscriptions::SubscriptionsRepository};
 use serde::Deserialize;
 
-
 #[derive(Deserialize)]
 pub(crate) struct FormData {
     email: String,

@@ -37,6 +37,17 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
 
     use routes_path::*;
 
+    let admin_routes = Router::new()
+        .route(ADMIN_DASHBOARD, get(admin_dashboard))
+        .route(
+            ADMIN_PASSWORD,
+            get(password_change_form).post(change_password),
+        );
+
+    let subscription_routes = Router::new()
+        .route(SUBSCRIPTIONS, post(subscribe_to_newsletter))
+        .route(SUBSCRIPTIONS_CONFIRM, get(subscriptions_confirm));
+
     // Authentication is handled via type system, specifically axum's extractor
     // `RequireAuth` for browser consumer and redirects to `/login` while
     // `AuthenticatedUser` for api consumer and returns 401
@@ -45,14 +56,9 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .route(HEALTH_CHECK, get(health_check))
         .route(LOGIN, get(login_form).post(login))
         .route(SIGN_UP, post(signup))
-        .route(ADMIN_DASHBOARD, get(admin_dashboard))
-        .route(SUBSCRIPTIONS, post(subscribe_to_newsletter))
-        .route(SUBSCRIPTIONS_CONFIRM, get(subscriptions_confirm))
-        .route(
-            ADMIN_PASSWORD,
-            get(password_change_form).post(change_password),
-        )
         .route(NEWSLETTERS, post(publish_newsletter))
+        .merge(admin_routes)
+        .merge(subscription_routes)
         .layer(MessagesManagerLayer)
         .layer(session_layer)
         .layer(request_id_middleware)
@@ -65,11 +71,14 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
 pub mod routes_path {
     pub const INDEX: &str = "/";
     pub const HEALTH_CHECK: &str = "/health";
+    pub const LOGIN: &str = "/login";
+    pub const SIGN_UP: &str = "/signup";
+    pub const NEWSLETTERS: &str = "/newsletters";
+
     pub const SUBSCRIPTIONS: &str = "/subscriptions";
     pub const SUBSCRIPTIONS_CONFIRM: &str = "/subscriptions/confirm";
-    pub const LOGIN: &str = "/login";
-    pub const NEWSLETTERS: &str = "/newsletters";
+
+    pub const ADMIN: &str = "/admin/dashboard";
     pub const ADMIN_DASHBOARD: &str = "/admin/dashboard";
     pub const ADMIN_PASSWORD: &str = "/admin/password";
-    pub const SIGN_UP: &str = "/signup";
 }

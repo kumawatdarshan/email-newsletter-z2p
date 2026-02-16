@@ -1,3 +1,3 @@
 -- Add migration script here
-
-ALTER TABLE subscriptions ADD COLUMN status TEXT NOT NULL;
+ALTER TABLE subscriptions
+ADD COLUMN status TEXT NOT NULL;

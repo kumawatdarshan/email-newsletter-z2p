@@ -14,6 +14,7 @@
     crane = {
       url = "github:ipetkov/crane";
     };
+    git-hooks.url = "github:cachix/git-hooks.nix";
 
     # Juspay Services flake
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
@@ -29,6 +30,7 @@
     treefmt-nix,
     process-compose-flake,
     services-flake,
+    git-hooks,
     ...
   }: let
     meta =
@@ -93,6 +95,7 @@
           cargoArtifacts
           formatter
           ;
+        gitHooksLib = git-hooks.lib.${system};
       };
 
       devShells = import ./nix/devshell.nix {
