@@ -30,6 +30,7 @@ argon2 = { version = "0.5.3", features = ["std"] }
 tower-sessions-redis-store.workspace = true
 repository = { path = "../repository" }
 axum-extra = { workspace = true, features = ["typed-header", "typed-routing"] }
+minijinja = "2.18.0"
 
 [dev-dependencies]
 tokio.workspace = true

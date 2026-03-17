@@ -7,7 +7,7 @@ use repository::Repository;
 use tokio::net::TcpListener;
 use tower_sessions_redis_store::fred::prelude::Pool as RedisPool;
 
-use crate::{AppState, routes::get_router};
+use crate::{AppState, routes::get_router, templates::get_jinja_env};
 
 pub struct Application {
     pub router: Router,
@@ -92,6 +92,7 @@ impl<'a> ApplicationBuilder<'a> {
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
         let app_state = AppState {
+            env: get_jinja_env(),
             repo,
             email_client,
             base_url,

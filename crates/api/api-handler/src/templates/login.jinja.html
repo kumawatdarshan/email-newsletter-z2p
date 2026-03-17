@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+</head>
+
+<body>
+  <h1>Welcome to my newsletter!</h1>
+
+  {% for m in messages %}
+  <p><i>{{ m }}</i></p>
+  {% endfor %}
+
+  <form action="/login" method="POST">
+    <label for="username">
+      Username
+      <input type="text" id="username" placeholder="Enter Username" name="username" required>
+    </label>
+    <label for="password">
+      Password
+      <input type="password" id="password" placeholder="Enter Password" name="password" required>
+    </label>
+    <button type="submit">Login</button>
+  </form>
+</body>
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    display: grid;
+    place-content: center;
+    min-height: 100dvh;
+    margin: 0;
+    background: #0D1117;
+    color: #BAC2DE;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 300px;
+    padding: 20px;
+
+    & label {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: color 0.2s;
+
+      &:has(input:focus) {
+        color: #58A6FF;
+      }
+    }
+
+    & input {
+      background: transparent;
+      border: 1px solid #30363D;
+      border-radius: 4px;
+      padding: 10px;
+      color: #F0F6FC;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+
+      &:focus {
+        border-color: #58A6FF;
+        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.15);
+      }
+
+      &::placeholder {
+        color: #484F58;
+      }
+    }
+
+    & button {
+      background: #238636;
+      color: #ffffff;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s, transform 0.1s;
+
+      &:hover {
+        background: #2EA043;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+
+    & .error-msg {
+      color: #f85149;
+      font-size: 0.85rem;
+      font-style: italic;
+      text-wrap: balance;
+    }
+  }
+</style>
+
+</html>

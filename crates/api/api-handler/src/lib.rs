@@ -10,6 +10,7 @@ mod signup;
 mod startup;
 mod subscriptions;
 mod subscriptions_confirm;
+mod templates;
 mod utils;
 use email_client::EmailClient;
 use home::*;
@@ -30,6 +31,7 @@ pub use utils::auth_extractors::AuthenticatedUser;
 /// State needed for various services like ~psql~,sqlite, redis, etc
 #[derive(Debug, Clone, FromRef)]
 pub struct AppState {
+    pub env: minijinja::Environment<'static>,
     pub repo: Repository,
     pub email_client: EmailClient,
     pub base_url: String,

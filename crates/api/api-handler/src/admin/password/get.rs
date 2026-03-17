@@ -1,57 +1,24 @@
+use crate::AppState;
+use crate::templates::JinjaEnv;
 use crate::utils::auth_extractors::RequireAuth;
 use axum::debug_handler;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
 use axum_messages::Messages;
+use minijinja::context;
 use repository::Repository;
-use std::fmt::Write;
 
-#[debug_handler]
+#[debug_handler(state = AppState)]
 pub async fn password_change_form(
     _: RequireAuth,
+    _: State<Repository>,
     flash: Messages,
-    State(_): State<Repository>,
+    State(jinja): State<JinjaEnv>,
 ) -> impl IntoResponse {
-    let mut msg_html = String::new();
-
-    for m in flash.into_iter() {
-        writeln!(msg_html, "<p><i>{}</i></p>", m.message).unwrap();
-    }
-
-    let html = format!(
-        r#"
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <title>Change Password</title>
-</head>
-
-<body>
-    {msg_html}
-  <form action="/admin/password" method="post">
-    <label>Current password
-      <input type="password" placeholder="Enter current password" name="current_password">
-    </label>
-    <br>
-    <label>New password
-      <input type="password" placeholder="Enter new password" name="new_password">
-    </label>
-    <br>
-    <label>Confirm new password
-      <input type="password" placeholder="Type the new password again" name="new_password_check">
-    </label>
-    <br>
-    <button type="submit">Change password</button>
-  </form>
-  <p><a href="/admin/dashboard">&lt;- Back</a></p>
-</body>
-
-</html>
-        "#
-    );
+    let messages: Vec<_> = flash.into_iter().map(|x| x.message).collect();
+    let template = jinja.get_template("change_password").unwrap();
+    let html = template.render(context! { messages }).unwrap();
 
     (StatusCode::OK, Html(html))
 }

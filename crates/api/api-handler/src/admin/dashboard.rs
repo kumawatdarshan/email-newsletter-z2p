@@ -1,32 +1,18 @@
+use crate::templates::JinjaEnv;
 use crate::utils::auth_extractors::RequireAuth;
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
+use minijinja::context;
 
-pub async fn admin_dashboard(RequireAuth(user): RequireAuth) -> Result<Response, Response> {
+pub async fn admin_dashboard(
+    RequireAuth(user): RequireAuth,
+    State(jinja): State<JinjaEnv>,
+) -> Result<Response, Response> {
     let username = user.username;
 
-    let html = format!(
-        r#"
-            <!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
-</head>
-
-<body>
-    <h1>Welcome! {username}</h1>
-
-    <p>Available actions:</p>
-    <ol>
-        <li><a href="/admin/password">Change password</a></li>
-    </ol>
-</body>
-
-</html>
-        "#
-    );
+    let template = jinja.get_template("admin_dashboard").unwrap();
+    let html = template.render(context! { username }).unwrap();
 
     Ok((StatusCode::OK, Html(html)).into_response())
 }
