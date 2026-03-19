@@ -73,7 +73,6 @@ pub mod routes_path {
     pub const HEALTH_CHECK: &str = "/health";
     pub const LOGIN: &str = "/login";
     pub const SIGN_UP: &str = "/signup";
-    pub const NEWSLETTERS: &str = "/newsletters";
 
     pub const SUBSCRIPTIONS: &str = "/subscriptions";
     pub const SUBSCRIPTIONS_CONFIRM: &str = "/subscriptions/confirm";
@@ -81,4 +80,5 @@ pub mod routes_path {
     pub const ADMIN: &str = "/admin/dashboard";
     pub const ADMIN_DASHBOARD: &str = "/admin/dashboard";
     pub const ADMIN_PASSWORD: &str = "/admin/password";
+    pub const NEWSLETTERS: &str = "/newsletters";
 }

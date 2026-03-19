@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Send a newsletter issue</title>
+</head>
+
+<body>
+  {% for m in messages %}
+  <p><i>{{ m }}</i></p>
+  {% endfor %}
+
+  <form action="/admin/newsletters" method="post">
+    <label for="title">Title
+      <input type="text" placeholder="Enter a title" name="title" />
+    </label>
+    <br />
+    <label for="content_html">HTML content
+      <textarea name="content_html" cols="30" rows="10"></textarea>
+    </label>
+    <br />
+    <label for="content_txt">Text content
+      <textarea name="content_html" cols="30" rows="10"></textarea>
+    </label>
+    <br />
+    <button type="submit">Send a newsletter issue</button>
+  </form>
+  <p><a href="/admin/dashboard">&lt;- Back</a></p>
+</body>
+
+</html>

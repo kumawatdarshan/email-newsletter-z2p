@@ -10,18 +10,18 @@ pub fn get_jinja_env() -> JinjaEnv {
         }
     });
 
-    env.add_template("home", include_str!("./home.jinja.html"))
+    env.add_template("home", include_str!("templates/home.jinja.html"))
         .unwrap();
-    env.add_template("login", include_str!("./login.jinja.html"))
+    env.add_template("login", include_str!("templates/login.jinja.html"))
         .unwrap();
     env.add_template(
         "admin_dashboard",
-        include_str!("./admin_dashboard.jinja.html"),
+        include_str!("templates/admin_dashboard.jinja.html"),
     )
     .unwrap();
     env.add_template(
         "change_password",
-        include_str!("./change_password.jinja.html"),
+        include_str!("templates/change_password.jinja.html"),
     )
     .unwrap();
 
