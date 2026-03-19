@@ -1,4 +1,3 @@
-mod dashboard;
-pub mod password;
-
-pub use dashboard::admin_dashboard;
+pub(crate) mod dashboard;
+pub(crate) mod newsletters;
+pub(crate) mod password;

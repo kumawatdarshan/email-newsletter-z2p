@@ -1,7 +1,8 @@
 use crate::{
     AppState,
     admin::{
-        admin_dashboard,
+        dashboard::admin_dashboard,
+        newsletters::{newsletter_issue_form, publish_newsletter},
         password::{change_password, password_change_form},
     },
     handle_404,
@@ -9,7 +10,6 @@ use crate::{
     home,
     login::{login, login_form},
     middlewares::RequestIdMakeSpan,
-    newsletters::publish_newsletter,
     signup::signup,
     subscriptions::subscribe_to_newsletter,
     subscriptions_confirm::subscriptions_confirm,
@@ -38,6 +38,10 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
     use routes_path::*;
 
     let admin_routes = Router::new()
+        .route(
+            ADMIN_NEWSLETTERS,
+            get(newsletter_issue_form).post(publish_newsletter),
+        )
         .route(ADMIN_DASHBOARD, get(admin_dashboard))
         .route(
             ADMIN_PASSWORD,
@@ -56,7 +60,6 @@ pub async fn get_router(app_state: AppState, redis_pool: Pool) -> anyhow::Result
         .route(HEALTH_CHECK, get(health_check))
         .route(LOGIN, get(login_form).post(login))
         .route(SIGN_UP, post(signup))
-        .route(NEWSLETTERS, post(publish_newsletter))
         .merge(admin_routes)
         .merge(subscription_routes)
         .layer(MessagesManagerLayer)
@@ -80,5 +83,5 @@ pub mod routes_path {
     pub const ADMIN: &str = "/admin/dashboard";
     pub const ADMIN_DASHBOARD: &str = "/admin/dashboard";
     pub const ADMIN_PASSWORD: &str = "/admin/password";
-    pub const NEWSLETTERS: &str = "/newsletters";
+    pub const ADMIN_NEWSLETTERS: &str = "/admin/newsletters";
 }

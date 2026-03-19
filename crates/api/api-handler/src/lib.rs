@@ -3,7 +3,6 @@ mod health;
 mod home;
 mod login;
 mod middlewares;
-mod newsletters;
 mod routes;
 mod session_state;
 mod signup;

@@ -66,7 +66,7 @@ impl TestApp {
         password: &str,
     ) -> reqwest::Response {
         self.api_client
-            .post(self.typed_path(routes_path::NEWSLETTERS))
+            .post(self.typed_path(routes_path::ADMIN_NEWSLETTERS))
             .json(&body)
             .basic_auth(username, Some(password))
             .send()

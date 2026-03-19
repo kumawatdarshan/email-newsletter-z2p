@@ -1,4 +1,4 @@
-use crate::utils::auth_extractors::AuthenticatedUser;
+use crate::AuthenticatedUser;
 use anyhow::{Context, anyhow};
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use domain::{ConfirmedSubscriber, SubscriberEmail};

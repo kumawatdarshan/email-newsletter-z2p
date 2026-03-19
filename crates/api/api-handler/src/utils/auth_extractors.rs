@@ -33,11 +33,13 @@ pub(crate) struct Credentials {
     pub(crate) password: SecretString,
 }
 
+/// JSON error, typical usage being POST/DELETE/PUT requests
+/// Common exception being server event to client such as `Session Expired, re-login`
 /// You must have repo as extractor to use this
 #[derive(Clone, Debug)]
 pub struct AuthenticatedUser {
-    pub user_id: String,
     pub username: String,
+    pub user_id: String,
 }
 
 impl<S> axum::extract::FromRequestParts<S> for AuthenticatedUser
@@ -72,6 +74,7 @@ where
     }
 }
 
+/// Redirects on 401, typical usage being protected GET endpoints
 pub struct RequireAuth(pub AuthenticatedUser);
 
 impl<S> FromRequestParts<S> for RequireAuth

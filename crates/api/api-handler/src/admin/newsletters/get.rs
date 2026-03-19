@@ -1,26 +1,21 @@
-use crate::AppState;
 use crate::templates::JinjaEnv;
 use crate::utils::auth_extractors::RequireAuth;
-use axum::debug_handler;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
+use axum::response::{Html, IntoResponse, Response};
 use axum_messages::Messages;
 use minijinja::context;
-use repository::Repository;
 
-#[debug_handler(state = AppState)]
-pub async fn password_change_form(
-    _: State<Repository>,
+pub async fn newsletter_issue_form(
     flash: Messages,
     RequireAuth(user): RequireAuth,
     State(jinja): State<JinjaEnv>,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let username = user.username;
 
     let messages: Vec<_> = flash.into_iter().map(|x| x.message).collect();
-    let template = jinja.get_template("change_password").unwrap();
+    let template = jinja.get_template("admin_newsletters").unwrap();
     let html = template.render(context! { messages, username }).unwrap();
 
-    (StatusCode::OK, Html(html))
+    Ok((StatusCode::OK, Html(html)).into_response())
 }

@@ -20,6 +20,12 @@ pub fn get_jinja_env() -> JinjaEnv {
     )
     .unwrap();
     env.add_template(
+        "admin_newsletters",
+        include_str!("templates/admin_newsletters.jinja.html"),
+    )
+    .unwrap();
+
+    env.add_template(
         "change_password",
         include_str!("templates/change_password.jinja.html"),
     )

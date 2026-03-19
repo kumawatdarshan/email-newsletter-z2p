@@ -1,5 +1,5 @@
 use crate::helpers::{ConfirmationLinks, FakeData, TestApp, spawn_app_testing};
-use api_handler::routes_path;
+use api_handler::routes_path::{self, ADMIN_NEWSLETTERS};
 use axum::http::StatusCode;
 use sqlx::types::Uuid;
 use wiremock::matchers::{any, method, path};
@@ -111,7 +111,7 @@ async fn requests_missing_auth_are_rejected() {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
     let response = reqwest::Client::new()
-        .post(app.typed_path(routes_path::NEWSLETTERS))
+        .post(app.typed_path(routes_path::ADMIN_NEWSLETTERS))
         .json(&app.fake_newsletter())
         .send()
         .await
@@ -162,4 +162,24 @@ async fn invalid_password_is_rejected() {
         r#"Basic realm="publish""#,
         response.headers()["WWW-Authenticate"]
     );
+}
+
+#[tokio::test]
+async fn get_responds_with_issue_form() {
+    let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let user = &app.test_user.username;
+    let pw = &app.test_user.password;
+
+    let response = app
+        .api_client
+        .get(app.typed_path(ADMIN_NEWSLETTERS))
+        .basic_auth(user, Some(pw))
+        .send()
+        .await
+        .expect("Failed to execute login html request");
+
+    let text = response.text().await.unwrap();
+
+    dbg!(&text);
+    assert!(text.contains(&format!(r#"<h1>Hello {user}</h1>"#)));
 }
