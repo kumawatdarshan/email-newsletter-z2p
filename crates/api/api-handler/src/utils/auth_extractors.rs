@@ -1,15 +1,10 @@
-use super::authentication::validate_credentials;
+use crate::routes_path::LOGIN;
 use crate::session_state::TypedSession;
-use crate::{routes_path::LOGIN, session_state::save_session};
-use anyhow::{Context, anyhow};
+use anyhow::anyhow;
 use axum::{
     extract::{FromRef, FromRequestParts},
     http::{StatusCode, header},
     response::{IntoResponse, Redirect, Response},
-};
-use axum_extra::{
-    TypedHeader,
-    headers::{Authorization, authorization::Basic},
 };
 use newsletter_macros::IntoErrorResponse;
 use repository::Repository;
@@ -57,17 +52,10 @@ where
             .await
             .map_err(|e| AuthError::UnexpectedError(anyhow!("Session error: {:?}", e)))?;
 
-        // 1. Try Session - If it fails or is empty, we just move on
         if let Ok(user) = try_session(&session).await {
             return Ok(user);
         }
 
-        // 2. Try Authenticating
-        if let Ok(user) = try_basic_auth(parts, state, session).await {
-            return Ok(user);
-        }
-
-        // 3. Everything failed
         Err(AuthError::InvalidCredentials(anyhow!(
             "No valid credentials provided"
         )))
@@ -110,52 +98,4 @@ async fn try_session(session: &TypedSession) -> Result<AuthenticatedUser, AuthEr
         .ok_or_else(|| AuthError::InvalidCredentials(anyhow!("No username in session")))?;
 
     Ok(AuthenticatedUser { user_id, username })
-}
-
-/// Try to authenticate via Basic Auth header.
-async fn try_basic_auth<S>(
-    parts: &mut axum::http::request::Parts,
-    state: &S,
-    session: TypedSession,
-) -> Result<AuthenticatedUser, AuthError>
-where
-    S: Send + Sync,
-    Repository: axum::extract::FromRef<S>,
-{
-    // check if auth header is available
-    let auth_header = Option::<TypedHeader<Authorization<Basic>>>::from_request_parts(parts, state)
-        .await
-        .map_err(|e| AuthError::UnexpectedError(anyhow::anyhow!("Header error: {:?}", e)))?;
-
-    let credentials = basic_authentication(auth_header)?;
-    let username = credentials.username.clone();
-    let repo = Repository::from_ref(state);
-    let user_id = validate_credentials(&repo, credentials).await?;
-
-    save_session(&session, &user_id, &username)
-        .await
-        .context("Failed to save session.")?;
-
-    Ok(AuthenticatedUser { user_id, username })
-}
-
-fn basic_authentication(
-    auth_header: Option<TypedHeader<Authorization<Basic>>>,
-) -> Result<Credentials, AuthError> {
-    let TypedHeader(auth) = auth_header
-        .ok_or_else(|| AuthError::InvalidCredentials(anyhow::anyhow!("Missing credentials")))?;
-
-    let username = auth.username();
-    let password = auth.password();
-
-    if username.is_empty() || password.is_empty() {
-        return Err(AuthError::InvalidCredentials(anyhow::anyhow!(
-            "Username or password cannot be empty"
-        )));
-    }
-
-    Ok(Credentials {
-        username: username.into(),
-        password: password.into(),
-    })
 }

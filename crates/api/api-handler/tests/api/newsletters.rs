@@ -56,8 +56,9 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() -> anyhow::Re
         .mount(&app.email_server)
         .await;
 
-    app.post(ADMIN_NEWSLETTERS)
-        .authenticated(&app.test_user)
+    app.login(&app.test_user)
+        .await?
+        .post(ADMIN_NEWSLETTERS)
         .json(&app.fake_newsletter())
         .send()
         .await?
@@ -77,8 +78,9 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() -> anyhow::Result<(
         .mount(&app.email_server)
         .await;
 
-    app.post(ADMIN_NEWSLETTERS)
-        .authenticated(&app.test_user)
+    app.login(&app.test_user)
+        .await?
+        .post(ADMIN_NEWSLETTERS)
         .json(&app.fake_newsletter())
         .send()
         .await?
@@ -108,9 +110,9 @@ async fn newsletters_returns_400_for_invalid_data() -> anyhow::Result<()> {
     ];
 
     for (invalid_body, error_message) in test_cases {
-        app
+        app.login(&app.test_user)
+            .await?
             .post(ADMIN_NEWSLETTERS)
-            .authenticated(&app.test_user)
             .json(&invalid_body)
             .send()
             .await?
@@ -145,9 +147,10 @@ async fn non_existing_user_is_rejected() -> anyhow::Result<()> {
     let app = spawn_app_testing().await?;
 
     let response = app
+        .login(&TestUser::new())
+        .await?
         .post(ADMIN_NEWSLETTERS)
         .json(&app.fake_newsletter())
-        .authenticated(&TestUser::new()) // non user
         .send()
         .await?
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -177,9 +180,10 @@ async fn invalid_password_is_rejected() -> anyhow::Result<()> {
     };
 
     let response = app
+        .login(&user_with_wrong_pw)
+        .await?
         .post(ADMIN_NEWSLETTERS)
         .json(&app.fake_newsletter())
-        .authenticated(&user_with_wrong_pw)
         .send()
         .await?
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -197,8 +201,9 @@ async fn get_responds_with_issue_form() -> anyhow::Result<()> {
     let app = spawn_app_testing().await?;
 
     let html = app
+        .login(&app.test_user)
+        .await?
         .get(ADMIN_NEWSLETTERS)
-        .authenticated(&app.test_user)
         .send()
         .await?
         .text()

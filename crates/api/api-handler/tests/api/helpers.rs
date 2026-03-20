@@ -1,5 +1,8 @@
 use anyhow::Context;
-use api_handler::{ApplicationBuilder, routes_path::SUBSCRIPTIONS};
+use api_handler::{
+    ApplicationBuilder,
+    routes_path::{LOGIN, SUBSCRIPTIONS},
+};
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
@@ -59,12 +62,22 @@ impl TestApp {
 pub trait AuthenticatedRequest: Sized {
     /// Attaches HTTP Basic Auth credentials from a `TestUser`.
     /// use for Auth failure
-    fn authenticated(self, user: &TestUser) -> Self;
+    async fn login(&self, user: &TestUser) -> anyhow::Result<&Self>;
 }
 
-impl AuthenticatedRequest for RequestBuilder {
-    fn authenticated(self, user: &TestUser) -> Self {
-        self.basic_auth(&user.username, Some(&user.password))
+impl AuthenticatedRequest for TestApp {
+    async fn login(&self, user: &TestUser) -> anyhow::Result<&Self> {
+        let form = [("username", &user.username), ("password", &user.password)];
+
+        let res = self.post(LOGIN).form(&form).send().await?;
+
+        assert!(
+            res.status().is_success() || res.status().is_redirection(),
+            "Login failed: {}",
+            res.status()
+        );
+
+        Ok(self)
     }
 }
 
