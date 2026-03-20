@@ -45,7 +45,7 @@ impl EmailClient {
         self.http_client
             .post(url)
             .header("Authorization", self.authorization_token.expose_secret())
-            .json(&request_body)
+            .form(&request_body)
             .send()
             .await?
             .error_for_status()?;
@@ -77,6 +77,8 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use claims::{assert_err, assert_ok};
     use domain::SubscriberEmail;
     use fake::{
@@ -120,17 +122,14 @@ mod tests {
     struct SendEmailBodyMatcher;
     impl wiremock::Match for SendEmailBodyMatcher {
         fn matches(&self, request: &wiremock::Request) -> bool {
-            let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
+            let body: HashMap<String, String> =
+                serde_urlencoded::from_bytes(&request.body).expect("Failed to parse form");
 
-            if let Ok(body) = result {
-                body.get("from").is_some()
-                    && body.get("to").is_some()
-                    && body.get("subject").is_some()
-                    && body.get("text").is_some()
-                    && body.get("html").is_some()
-            } else {
-                false
-            }
+            body.contains_key("from")
+                && body.contains_key("to")
+                && body.contains_key("subject")
+                && body.contains_key("text")
+                && body.contains_key("html")
         }
     }
 
@@ -140,7 +139,7 @@ mod tests {
         let email_client = email_client(&mock_server.uri());
 
         Mock::given(header_exists("Authorization"))
-            .and(header("Content-Type", "application/json"))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
             .and(path("/email"))
             .and(method("POST"))
             .and(SendEmailBodyMatcher)
@@ -152,7 +151,7 @@ mod tests {
         let outcome = email_client
             .send_email(&email(), &subject(), &content(), &content())
             .await;
-
+        dbg!(&outcome);
         assert_ok!(outcome);
     }
 

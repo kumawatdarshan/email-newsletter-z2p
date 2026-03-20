@@ -88,7 +88,7 @@ async fn subscribe_sends_a_confirmation_link_for_valid_data() -> anyhow::Result<
         .await?;
 
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
-    let confirmation_links = app.retrieve_links(email_request);
+    let confirmation_links = app.retrieve_links(email_request)?;
 
     assert_eq!(confirmation_links.html, confirmation_links.plaintext);
     Ok(())

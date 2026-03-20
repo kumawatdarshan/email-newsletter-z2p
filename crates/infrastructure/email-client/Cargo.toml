@@ -11,6 +11,7 @@ configuration.workspace = true
 
 domain.workspace = true
 hakari-hack.workspace = true
+serde_urlencoded.workspace = true
 
 [dev-dependencies]
 claims.workspace = true

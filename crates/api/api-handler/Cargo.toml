@@ -26,6 +26,7 @@ base64.workspace = true
 url.workspace = true
 axum-messages.workspace = true
 tower-sessions.workspace = true
+serde_urlencoded.workspace = true
 argon2 = { version = "0.5.3", features = ["std"] }
 tower-sessions-redis-store.workspace = true
 repository = { path = "../repository" }

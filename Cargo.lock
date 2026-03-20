@@ -69,6 +69,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sqlx",
  "telemetry",
  "thiserror",
@@ -810,6 +811,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "tokio",
  "wiremock",
 ]

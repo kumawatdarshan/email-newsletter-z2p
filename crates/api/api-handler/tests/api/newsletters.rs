@@ -32,7 +32,7 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> anyhow::Result<Confirma
         .pop()
         .unwrap();
 
-    Ok(app.retrieve_links(&email_request))
+    app.retrieve_links(&email_request)
 }
 
 async fn create_confirmed_subscriber(app: &TestApp) -> anyhow::Result<()> {
@@ -59,7 +59,7 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() -> anyhow::Re
     app.login(&app.test_user)
         .await?
         .post(ADMIN_NEWSLETTERS)
-        .json(&app.fake_newsletter())
+        .form(&app.fake_newsletter())
         .send()
         .await?
         .assert_status(StatusCode::OK);
@@ -81,7 +81,7 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() -> anyhow::Result<(
     app.login(&app.test_user)
         .await?
         .post(ADMIN_NEWSLETTERS)
-        .json(&app.fake_newsletter())
+        .form(&app.fake_newsletter())
         .send()
         .await?
         .assert_status(StatusCode::OK);
@@ -96,16 +96,14 @@ async fn newsletters_returns_400_for_invalid_data() -> anyhow::Result<()> {
     let test_cases = vec![
         (
             serde_json::json!({
-                "content": {
-                    "text": "Newsletter body as plain text",
-                    "html": "<p>Newsletter body as HTML</p>",
-                }
+                "text": "Newsletter body as plain text",
+                "html": "<p>Newsletter body as HTML</p>",
             }),
             "missing title",
         ),
         (
             serde_json::json!({"title": "Newsletter!"}),
-            "missing content",
+            "missing html & text",
         ),
     ];
 
@@ -113,7 +111,7 @@ async fn newsletters_returns_400_for_invalid_data() -> anyhow::Result<()> {
         app.login(&app.test_user)
             .await?
             .post(ADMIN_NEWSLETTERS)
-            .json(&invalid_body)
+            .form(&invalid_body)
             .send()
             .await?
             .assert_status_with_msg(
@@ -130,7 +128,7 @@ async fn requests_missing_auth_are_rejected() -> anyhow::Result<()> {
 
     let response = app
         .post(ADMIN_NEWSLETTERS)
-        .json(&app.fake_newsletter())
+        .form(&app.fake_newsletter())
         .send()
         .await?
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -150,7 +148,7 @@ async fn non_existing_user_is_rejected() -> anyhow::Result<()> {
         .login(&TestUser::new())
         .await?
         .post(ADMIN_NEWSLETTERS)
-        .json(&app.fake_newsletter())
+        .form(&app.fake_newsletter())
         .send()
         .await?
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -183,7 +181,7 @@ async fn invalid_password_is_rejected() -> anyhow::Result<()> {
         .login(&user_with_wrong_pw)
         .await?
         .post(ADMIN_NEWSLETTERS)
-        .json(&app.fake_newsletter())
+        .form(&app.fake_newsletter())
         .send()
         .await?
         .assert_status(StatusCode::UNAUTHORIZED);

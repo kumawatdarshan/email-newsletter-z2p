@@ -1,6 +1,6 @@
 use crate::AuthenticatedUser;
 use anyhow::{Context, anyhow};
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
 use domain::{ConfirmedSubscriber, SubscriberEmail};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
@@ -8,13 +8,8 @@ use repository::{Repository, newsletters::NewsletterRepository};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct BodyData {
+pub struct FormData {
     title: String,
-    content: Content,
-}
-
-#[derive(Deserialize)]
-struct Content {
     html: String,
     text: String,
 }
@@ -28,35 +23,31 @@ pub enum PublishError {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(body, repo, email_client),
+    skip(form, repo, email_client),
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub(crate) async fn publish_newsletter(
     _: AuthenticatedUser,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
-    Json(body): Json<BodyData>,
+    Form(form): Form<FormData>,
 ) -> Result<impl IntoResponse, PublishError> {
     let subscribers = get_confirmed_subscribers(&repo).await?;
 
     for subscriber in subscribers {
-        match subscriber {
-            Ok(s) => {
-                let email = &s.email;
-                email_client
-                    .send_email(email, &body.title, &body.content.html, &body.content.text)
-                    .await
-                    .with_context(|| format!("Failed to send newsletter to: {email}"))?;
-            }
+        let Ok(subscriber) = subscriber else {
             // We did that convoluted Result<Vec<Result<X>,E>, E> so we could do this
             // By this I mean, separate warning logs for each invalid subscriber
-            Err(error) => {
-                tracing::warn!(
-                    error.cause_chain = ?error,
-                    "Skipping a confirmed subscriber, Using an invalid mail.",
-                )
-            }
-        }
+            tracing::warn!(
+                error.cause_chain = ?subscriber.unwrap_err(),
+                "Skipping a confirmed subscriber, Using an invalid mail.",
+            );
+            continue;
+        };
+        email_client
+            .send_email(&subscriber.email, &form.title, &form.html, &form.text)
+            .await
+            .with_context(|| format!("Failed to send newsletter to: {}", subscriber.email))?;
     }
 
     Ok(StatusCode::OK)

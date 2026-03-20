@@ -87,6 +87,7 @@ sha3 = "0.10.8"
 tower-sessions-redis-store = { version = "0.16.0", features = [
   "enable-rustls",
 ] }
+serde_urlencoded = "0.7.1"
 
 # Local crates
 

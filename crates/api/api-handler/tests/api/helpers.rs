@@ -11,7 +11,7 @@ use configuration::{DatabaseConfiguration, get_configuration};
 use repository::Repository;
 use reqwest::{RequestBuilder, Response, StatusCode, Url};
 use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
     matchers::{method, path},
@@ -156,10 +156,8 @@ impl FakeData for TestApp {
     fn fake_newsletter(&self) -> serde_json::Value {
         serde_json::json!({
            "title": "Newsletter Title",
-           "content": {
-               "text": "Plain-text Body",
-               "html": "<p>HTML body</p>",
-           }
+           "text": "Plain-text Body",
+           "html": "<p>HTML body</p>",
         })
     }
 
@@ -182,25 +180,33 @@ impl TestApp {
     }
 
     /// retrieve links from an email using `linkify`
-    pub(crate) fn retrieve_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
-        let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+    pub(crate) fn retrieve_links(
+        &self,
+        email_request: &wiremock::Request,
+    ) -> anyhow::Result<ConfirmationLinks> {
+        let body: HashMap<String, String> =
+            serde_urlencoded::from_bytes(&email_request.body).context("Failed to parse form")?;
 
-        let get_link = |s: &str| {
+        fn get_link(s: &str) -> anyhow::Result<Url> {
             let links: Vec<_> = linkify::LinkFinder::new()
                 .links(s)
                 .filter(|l| *l.kind() == linkify::LinkKind::Url)
                 .collect();
-            assert_eq!(links.len(), 1);
-            let raw_link = links[0].as_str().to_owned();
-            let link = Url::parse(&raw_link).unwrap();
-            assert_eq!(link.host_str().unwrap(), "127.0.0.1");
-            link
-        };
 
-        ConfirmationLinks {
-            html: get_link(body["html"].as_str().unwrap()),
-            plaintext: get_link(body["text"].as_str().unwrap()),
+            assert_eq!(links.len(), 1);
+
+            let raw_link = links[0].as_str().to_owned();
+            let link = Url::parse(&raw_link).context("Failed to parse url")?;
+
+            assert_eq!(link.host_str().unwrap(), "127.0.0.1");
+
+            Ok(link)
         }
+
+        Ok(ConfirmationLinks {
+            html: get_link(body["html"].as_str())?,
+            plaintext: get_link(body["text"].as_str())?,
+        })
     }
 }
 
