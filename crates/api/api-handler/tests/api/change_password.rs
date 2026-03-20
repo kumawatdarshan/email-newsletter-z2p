@@ -2,59 +2,71 @@ use api_handler::routes_path::{ADMIN_PASSWORD, LOGIN};
 use reqwest::StatusCode;
 use sqlx::types::Uuid;
 
-use crate::helpers::{assert_is_redirect_to, spawn_app_testing};
+use crate::helpers::{ResponseAssertions, TestAppRequests, spawn_app_testing};
 
 #[tokio::test]
-async fn must_be_logged_in_to_see_change_password_form() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
+async fn must_be_logged_in_to_see_change_password_form() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
 
-    let response = app.get_change_password().await;
+    app.get(ADMIN_PASSWORD)
+        .send()
+        .await?
+        .assert_redirect_to(LOGIN);
 
-    assert_is_redirect_to(&response, LOGIN);
+    Ok(())
 }
 
 #[tokio::test]
-async fn must_be_logged_in_to_change_password() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
+async fn must_be_logged_in_to_change_password() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
     let uuid = Uuid::new_v4().to_string();
 
     let response = app
-        .post_change_password(&serde_json::json!({
+        .post(ADMIN_PASSWORD)
+        .form(&serde_json::json!({
             "current_password": Uuid::new_v4().to_string(),
             "new_password": &uuid,
             "new_password_check": &uuid,
         }))
-        .await;
+        .send()
+        .await?;
 
     assert_eq!(StatusCode::UNAUTHORIZED, response.status());
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn passwords_must_match() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
+async fn passwords_must_match() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
     let pw = Uuid::new_v4().to_string();
     let pw2 = Uuid::new_v4().to_string();
 
     // Act - Part 1 - Login
-    app.post_login(&serde_json::json!({
-        "username": &app.test_user.username,
-        "password": &app.test_user.password
-    }))
-    .await;
+    app.post(LOGIN)
+        .form(&serde_json::json!({
+            "username": &app.test_user.username,
+            "password": &app.test_user.password
+        }))
+        .send()
+        .await?;
 
     // Act - Part 2 - Try to change password
-    let response = app
-        .post_change_password(&serde_json::json!({
+    app.post(ADMIN_PASSWORD)
+        .form(&serde_json::json!({
             "current_password": &app.test_user.password,
             "new_password": &pw,
             "new_password_check": &pw2,
         }))
-        .await;
+        .send()
+        .await?
+        .assert_redirect_to(ADMIN_PASSWORD);
 
-    assert_is_redirect_to(&response, ADMIN_PASSWORD);
+    let html = app.get(ADMIN_PASSWORD).send().await?.text().await?;
 
-    let html = app.get_change_password_html().await;
     assert!(html.contains(
         "<p><i>You entered two different new passwords - the field values must match.</i></p>"
     ));
+
+    Ok(())
 }

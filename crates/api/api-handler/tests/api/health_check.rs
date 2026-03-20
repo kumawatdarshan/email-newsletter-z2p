@@ -1,7 +1,6 @@
-use crate::helpers::spawn_app_testing;
-use api_handler::routes_path;
+use crate::helpers::{ResponseAssertions, TestAppRequests, spawn_app_testing};
+use api_handler::routes_path::HEALTH_CHECK;
 use axum::http::StatusCode;
-use reqwest::Client;
 
 /// # Why this complicated test for something simple as health_check?
 /// This is a **black box test**, meaning it is decoupled(*mostly*) from our codebase.
@@ -17,16 +16,17 @@ use reqwest::Client;
 /// Update: it was totally worth it. I now know the struggles of integration testing and how to get around them.
 /// Update 2: New Revelation. `/health` endpoint is rather common, it is used to test if our service is alive.
 #[tokio::test]
-async fn test_health_check() {
+async fn test_health_check() -> anyhow::Result<()> {
     // Arrange
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
+    let app = spawn_app_testing().await?;
 
-    let response = Client::new()
-        .get(app.typed_path(routes_path::HEALTH_CHECK))
+    app.get(HEALTH_CHECK)
         .send()
-        .await
-        .expect("failed to send request");
+        .await?
+        .assert_status(StatusCode::OK);
 
-    assert_eq!(StatusCode::OK, response.status());
-    assert_eq!(Some(0), Some(0)) // to validate there was no nothing present
+    // to validate there was no nothing present
+    assert_eq!(Some(0), Some(0));
+
+    Ok(())
 }

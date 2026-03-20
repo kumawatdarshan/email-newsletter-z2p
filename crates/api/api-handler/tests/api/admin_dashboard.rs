@@ -1,12 +1,16 @@
-use api_handler::routes_path::LOGIN;
+use anyhow::Ok;
+use api_handler::routes_path::{ADMIN_DASHBOARD, LOGIN};
 
-use crate::helpers::{assert_is_redirect_to, spawn_app_testing};
+use crate::helpers::{ResponseAssertions, TestAppRequests, spawn_app_testing};
 
 #[tokio::test]
-async fn must_be_logged_in_to_access_admin_dashboard() {
+async fn must_be_logged_in_to_access_admin_dashboard() -> anyhow::Result<()> {
     let app = spawn_app_testing().await.expect("Failed to spawn app");
 
-    let response = app.get_admin_dashboard().await;
+    app.get(ADMIN_DASHBOARD)
+        .send()
+        .await?
+        .assert_redirect_to(LOGIN);
 
-    assert_is_redirect_to(&response, LOGIN);
+    Ok(())
 }

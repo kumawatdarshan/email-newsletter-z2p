@@ -1,11 +1,14 @@
-use crate::helpers::{ConfirmationLinks, FakeData, TestApp, spawn_app_testing};
-use api_handler::routes_path::{self, ADMIN_NEWSLETTERS};
+use crate::helpers::{
+    AuthenticatedRequest, ConfirmationLinks, FakeData, ResponseAssertions, TestApp,
+    TestAppRequests, TestUser, spawn_app_testing,
+};
+use api_handler::routes_path::{ADMIN_NEWSLETTERS, SUBSCRIPTIONS};
 use axum::http::StatusCode;
 use sqlx::types::Uuid;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
-async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
+async fn create_unconfirmed_subscriber(app: &TestApp) -> anyhow::Result<ConfirmationLinks> {
     let _mock_guard = Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
@@ -14,10 +17,12 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
         .mount_as_scoped(&app.email_server)
         .await;
 
-    app.post_subscriptions(app.fake_email())
-        .await
-        .error_for_status()
-        .unwrap();
+    app.post(SUBSCRIPTIONS)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(app.fake_email())
+        .send()
+        .await?
+        .error_for_status()?;
 
     let email_request = app
         .email_server
@@ -27,22 +32,22 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
         .pop()
         .unwrap();
 
-    app.retrieve_links(&email_request)
+    Ok(app.retrieve_links(&email_request))
 }
 
-async fn create_confirmed_subscriber(app: &TestApp) {
-    let confirmation_link = create_unconfirmed_subscriber(app).await;
+async fn create_confirmed_subscriber(app: &TestApp) -> anyhow::Result<()> {
+    let confirmation_link = create_unconfirmed_subscriber(app).await?;
     reqwest::get(confirmation_link.html)
-        .await
-        .unwrap()
-        .error_for_status()
-        .unwrap();
+        .await?
+        .error_for_status()?;
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
-    create_unconfirmed_subscriber(&app).await;
+async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
+    create_unconfirmed_subscriber(&app).await?;
 
     Mock::given(any())
         .respond_with(ResponseTemplate::new(StatusCode::OK))
@@ -51,17 +56,20 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() {
         .mount(&app.email_server)
         .await;
 
-    let newsletter_request_body = app.fake_newsletter();
+    app.post(ADMIN_NEWSLETTERS)
+        .authenticated(&app.test_user)
+        .json(&app.fake_newsletter())
+        .send()
+        .await?
+        .assert_status(StatusCode::OK);
 
-    let response = app.post_newsletters(newsletter_request_body).await;
-
-    assert_eq!(StatusCode::OK, response.status());
+    Ok(())
 }
 
 #[tokio::test]
-async fn newsletter_are_delivered_to_confirmed_subscribers() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
-    create_confirmed_subscriber(&app).await;
+async fn newsletter_are_delivered_to_confirmed_subscribers() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
+    create_confirmed_subscriber(&app).await?;
 
     Mock::given(path("/email"))
         .respond_with(ResponseTemplate::new(StatusCode::OK))
@@ -69,16 +77,19 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() {
         .mount(&app.email_server)
         .await;
 
-    let newsletter_request_body = app.fake_newsletter();
+    app.post(ADMIN_NEWSLETTERS)
+        .authenticated(&app.test_user)
+        .json(&app.fake_newsletter())
+        .send()
+        .await?
+        .assert_status(StatusCode::OK);
 
-    let response = app.post_newsletters(newsletter_request_body).await;
-
-    assert_eq!(StatusCode::OK, response.status());
+    Ok(())
 }
 
 #[tokio::test]
-async fn newsletters_returns_400_for_invalid_data() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
+async fn newsletters_returns_400_for_invalid_data() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
 
     let test_cases = vec![
         (
@@ -95,91 +106,104 @@ async fn newsletters_returns_400_for_invalid_data() {
             "missing content",
         ),
     ];
-    for (invalid_body, error_message) in test_cases {
-        let response = app.post_newsletters(invalid_body).await;
 
-        assert_eq!(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            response.status(),
-            "The API did not fail with 400 Bad Request when the payload was {error_message}."
-        );
+    for (invalid_body, error_message) in test_cases {
+        app
+            .post(ADMIN_NEWSLETTERS)
+            .authenticated(&app.test_user)
+            .json(&invalid_body)
+            .send()
+            .await?
+            .assert_status_with_msg(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                &format!("The API did not fail with 422 Unprocessable Entity when the payload was {error_message}."),
+            );
     }
+    Ok(())
 }
 
 #[tokio::test]
-async fn requests_missing_auth_are_rejected() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
+async fn requests_missing_auth_are_rejected() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
 
-    let response = reqwest::Client::new()
-        .post(app.typed_path(routes_path::ADMIN_NEWSLETTERS))
+    let response = app
+        .post(ADMIN_NEWSLETTERS)
         .json(&app.fake_newsletter())
         .send()
-        .await
-        .expect("Failed to send request");
+        .await?
+        .assert_status(StatusCode::UNAUTHORIZED);
 
-    assert_eq!(StatusCode::UNAUTHORIZED, response.status());
     assert_eq!(
         r#"Basic realm="publish""#,
         response.headers()["WWW-Authenticate"]
     );
+    Ok(())
 }
 
 #[tokio::test]
-async fn non_existing_user_is_rejected() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let user = Uuid::new_v4().to_string();
-    let pw = Uuid::new_v4().to_string();
-
-    let newsletter_request_body = app.fake_newsletter();
+async fn non_existing_user_is_rejected() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
 
     let response = app
-        .post_newsletters_with_auth(newsletter_request_body, &user, &pw)
-        .await;
-
-    assert_eq!(StatusCode::UNAUTHORIZED, response.status());
-    assert_eq!(
-        r#"Basic realm="publish""#,
-        response.headers()["WWW-Authenticate"]
-    );
-}
-
-#[tokio::test]
-async fn invalid_password_is_rejected() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let user = &app.test_user.username;
-
-    let pw = Uuid::new_v4().to_string();
-    assert_ne!(pw, app.test_user.password);
-
-    let newsletter_request_body = app.fake_newsletter();
-
-    let response = app
-        .post_newsletters_with_auth(newsletter_request_body, user, &pw)
-        .await;
-
-    assert_eq!(StatusCode::UNAUTHORIZED, response.status());
-    assert_eq!(
-        r#"Basic realm="publish""#,
-        response.headers()["WWW-Authenticate"]
-    );
-}
-
-#[tokio::test]
-async fn get_responds_with_issue_form() {
-    let app = spawn_app_testing().await.expect("Failed to spawn app");
-    let user = &app.test_user.username;
-    let pw = &app.test_user.password;
-
-    let response = app
-        .api_client
-        .get(app.typed_path(ADMIN_NEWSLETTERS))
-        .basic_auth(user, Some(pw))
+        .post(ADMIN_NEWSLETTERS)
+        .json(&app.fake_newsletter())
+        .authenticated(&TestUser::new()) // non user
         .send()
-        .await
-        .expect("Failed to execute login html request");
+        .await?
+        .assert_status(StatusCode::UNAUTHORIZED);
 
-    let text = response.text().await.unwrap();
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
 
-    dbg!(&text);
-    assert!(text.contains(&format!(r#"<h1>Hello {user}</h1>"#)));
+    Ok(())
+}
+
+#[tokio::test]
+async fn invalid_password_is_rejected() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
+
+    let user_with_wrong_pw = {
+        let mut x = app.test_user.clone();
+        let password = Uuid::new_v4().to_string();
+        assert_ne!(
+            password, x.password,
+            "Unfortunate randomness. 2 UUID which should not match, matched. Run the test again."
+        );
+
+        x.password = password;
+        x
+    };
+
+    let response = app
+        .post(ADMIN_NEWSLETTERS)
+        .json(&app.fake_newsletter())
+        .authenticated(&user_with_wrong_pw)
+        .send()
+        .await?
+        .assert_status(StatusCode::UNAUTHORIZED);
+
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn get_responds_with_issue_form() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
+
+    let html = app
+        .get(ADMIN_NEWSLETTERS)
+        .authenticated(&app.test_user)
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    assert!(html.contains(&format!(r#"<h1>Hello {}</h1>"#, &app.test_user.username)));
+    Ok(())
 }

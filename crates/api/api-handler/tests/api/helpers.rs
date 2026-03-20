@@ -1,15 +1,12 @@
 use anyhow::Context;
-use api_handler::{
-    ApplicationBuilder,
-    routes_path::{self, ADMIN_DASHBOARD, ADMIN_PASSWORD, LOGIN},
-};
+use api_handler::{ApplicationBuilder, routes_path::SUBSCRIPTIONS};
 use argon2::{
     Argon2, Params,
     password_hash::{SaltString, rand_core::OsRng},
 };
 use configuration::{DatabaseConfiguration, get_configuration};
 use repository::Repository;
-use reqwest::{StatusCode, Url};
+use reqwest::{RequestBuilder, Response, StatusCode, Url};
 use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions, types::Uuid};
 use std::path::PathBuf;
 use wiremock::{
@@ -27,7 +24,7 @@ pub struct TestApp {
     pub test_user: TestUser,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TestUser {
     pub user_id: String,
     pub username: String,
@@ -40,12 +37,6 @@ pub struct ConfirmationLinks {
     pub plaintext: Url,
 }
 
-pub(crate) trait FakeData {
-    fn fake_email(&self) -> String;
-    fn fake_newsletter(&self) -> serde_json::Value;
-    fn fake_invalid_account(&self) -> serde_json::Value;
-}
-
 impl TestApp {
     pub(crate) fn typed_path(&self, path: &str) -> Url {
         let base_url = Url::parse(&self.address)
@@ -54,34 +45,127 @@ impl TestApp {
         base_url.join(path).expect("Failed to join path")
     }
 
-    pub(crate) async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
-        self.post_newsletters_with_auth(body, &self.test_user.username, &self.test_user.password)
-            .await
-    }
-
-    pub(crate) async fn post_newsletters_with_auth(
-        &self,
-        body: serde_json::Value,
-        username: &str,
-        password: &str,
-    ) -> reqwest::Response {
-        self.api_client
-            .post(self.typed_path(routes_path::ADMIN_NEWSLETTERS))
-            .json(&body)
-            .basic_auth(username, Some(password))
-            .send()
-            .await
-            .expect("Failed to execute request.")
-    }
-
     pub(crate) async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
-            .post(self.typed_path(routes_path::SUBSCRIPTIONS))
+            .post(self.typed_path(SUBSCRIPTIONS))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
             .await
             .expect("Failed to execute request.")
+    }
+}
+
+pub trait AuthenticatedRequest: Sized {
+    /// Attaches HTTP Basic Auth credentials from a `TestUser`.
+    /// use for Auth failure
+    fn authenticated(self, user: &TestUser) -> Self;
+}
+
+impl AuthenticatedRequest for RequestBuilder {
+    fn authenticated(self, user: &TestUser) -> Self {
+        self.basic_auth(&user.username, Some(&user.password))
+    }
+}
+
+pub trait TestAppRequests {
+    fn get(&self, path: &str) -> RequestBuilder;
+    fn post(&self, path: &str) -> RequestBuilder;
+    fn typed_url(&self, path: &str) -> Url;
+}
+
+impl TestAppRequests for TestApp {
+    fn typed_url(&self, route: &str) -> Url {
+        let base = Url::parse(&self.address)
+            .unwrap_or_else(|e| panic!("Failed to parse base address: {}\n{e}", self.address));
+        base.join(route).expect("Failed to join path")
+    }
+
+    fn get(&self, route: &str) -> RequestBuilder {
+        self.api_client.get(self.typed_url(route))
+    }
+
+    fn post(&self, route: &str) -> RequestBuilder {
+        self.api_client.post(self.typed_url(route))
+    }
+}
+
+pub trait ResponseAssertions {
+    /// Assert the response is a 303 redirect to `location`.
+    fn assert_redirect_to(self, location: &str) -> Self;
+
+    /// Assert an exact status code.
+    fn assert_status(self, expected: StatusCode) -> Self;
+
+    /// Assert an exact status code.
+    fn assert_status_with_msg(self, expected: StatusCode, msg: &str) -> Self;
+}
+
+impl ResponseAssertions for Response {
+    fn assert_redirect_to(self, location: &str) -> Self {
+        assert_eq!(
+            StatusCode::SEE_OTHER,
+            self.status(),
+            "Expected 303 SEE_OTHER redirect"
+        );
+        assert_eq!(
+            location,
+            self.headers()
+                .get("Location")
+                .expect("Missing Location header"),
+            "Redirect target mismatch"
+        );
+        self
+    }
+
+    fn assert_status(self, expected: StatusCode) -> Self {
+        assert_eq!(expected, self.status());
+        self
+    }
+
+    fn assert_status_with_msg(self, expected: StatusCode, msg: &str) -> Self {
+        assert_eq!(expected, self.status(), "{msg}");
+        self
+    }
+}
+
+pub(crate) trait FakeData {
+    fn fake_email(&self) -> String;
+    fn fake_newsletter(&self) -> serde_json::Value;
+    fn fake_invalid_account(&self) -> serde_json::Value;
+}
+
+impl FakeData for TestApp {
+    fn fake_email(&self) -> String {
+        "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
+    }
+
+    fn fake_newsletter(&self) -> serde_json::Value {
+        serde_json::json!({
+           "title": "Newsletter Title",
+           "content": {
+               "text": "Plain-text Body",
+               "html": "<p>HTML body</p>",
+           }
+        })
+    }
+
+    fn fake_invalid_account(&self) -> serde_json::Value {
+        serde_json::json!({
+            "username": "random-username",
+            "password": "random-password",
+        })
+    }
+}
+
+impl TestApp {
+    /// Mounts a one-shot mock on the fake email server.
+    pub(crate) async fn mock_mail_server(&self, status_code: StatusCode) {
+        Mock::given(path("/email"))
+            .and(method("POST"))
+            .respond_with(ResponseTemplate::new(status_code))
+            .mount(&self.email_server)
+            .await
     }
 
     /// retrieve links from an email using `linkify`
@@ -94,97 +178,21 @@ impl TestApp {
                 .filter(|l| *l.kind() == linkify::LinkKind::Url)
                 .collect();
             assert_eq!(links.len(), 1);
-
             let raw_link = links[0].as_str().to_owned();
-            let confirmation_link = Url::parse(&raw_link).unwrap();
-            assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
-
-            confirmation_link
+            let link = Url::parse(&raw_link).unwrap();
+            assert_eq!(link.host_str().unwrap(), "127.0.0.1");
+            link
         };
 
-        let html = get_link(body["html"].as_str().unwrap());
-        let plaintext = get_link(body["text"].as_str().unwrap());
-
-        ConfirmationLinks { html, plaintext }
-    }
-
-    pub(crate) async fn mock_mail_server(&self, status_code: StatusCode) {
-        Mock::given(path("/email"))
-            .and(method("POST"))
-            .respond_with(ResponseTemplate::new(status_code))
-            .mount(&self.email_server)
-            .await
-    }
-
-    pub(crate) async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
-    where
-        Body: serde::Serialize,
-    {
-        self.api_client
-            .post(self.typed_path(routes_path::LOGIN))
-            .form(body)
-            .send()
-            .await
-            .expect("Failed to post login.")
-    }
-
-    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
-        self.api_client
-            .get(self.typed_path(ADMIN_DASHBOARD))
-            .send()
-            .await
-            .expect("Failed to execute /admin/dashboard")
-    }
-
-    pub async fn get_change_password(&self) -> reqwest::Response {
-        self.api_client
-            .get(self.typed_path(ADMIN_PASSWORD))
-            .send()
-            .await
-            .expect("Failed to execute /admin/password")
-    }
-
-    pub async fn get_change_password_html(&self) -> String {
-        self.get_change_password().await.text().await.unwrap()
-    }
-
-    pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
-    where
-        Body: serde::Serialize,
-    {
-        self.api_client
-            .post(self.typed_path(ADMIN_PASSWORD))
-            .form(body)
-            .send()
-            .await
-            .expect("Failed to post {ADMIN_PASSWORD}.")
-    }
-
-    pub(crate) async fn get_login_html(&self) -> String {
-        self.api_client
-            .get(self.typed_path(LOGIN))
-            .send()
-            .await
-            .expect("Failed to execute login html request")
-            .text()
-            .await
-            .unwrap()
-    }
-
-    pub(crate) async fn get_admin_dashboard_html(&self) -> String {
-        self.api_client
-            .get(self.typed_path(ADMIN_DASHBOARD))
-            .send()
-            .await
-            .expect("Failed to execute /admin/dashboard html request")
-            .text()
-            .await
-            .unwrap()
+        ConfirmationLinks {
+            html: get_link(body["html"].as_str().unwrap()),
+            plaintext: get_link(body["text"].as_str().unwrap()),
+        }
     }
 }
 
 impl TestUser {
-    pub fn generate() -> Self {
+    pub fn new() -> Self {
         Self {
             user_id: Uuid::new_v4().to_string(),
             username: Uuid::new_v4().to_string(),
@@ -216,29 +224,6 @@ impl TestUser {
         .execute(pool)
         .await
         .expect("Failed to create test user");
-    }
-}
-
-impl FakeData for TestApp {
-    fn fake_email(&self) -> String {
-        "name=le%20guin&email=ursula_le_guin%40gmail.com".to_string()
-    }
-
-    fn fake_newsletter(&self) -> serde_json::Value {
-        serde_json::json!({
-           "title": "Newsletter Title",
-           "content": {
-               "text": "Plain-text Body",
-               "html": "<p>HTML body</p>",
-           }
-        })
-    }
-
-    fn fake_invalid_account(&self) -> serde_json::Value {
-        serde_json::json!({
-            "username": "random-username",
-            "password": "random-password",
-        })
     }
 }
 
@@ -291,7 +276,7 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
     };
 
     let db_pool = configure_test_database(&config.database).await;
-    let test_user = TestUser::generate();
+    let test_user = TestUser::new();
     test_user.store(&db_pool).await;
 
     let app = ApplicationBuilder::new(&config)
@@ -310,9 +295,4 @@ pub async fn spawn_app_testing() -> anyhow::Result<TestApp> {
     tokio::spawn(async move { app.run().await.unwrap() });
 
     Ok(test_app)
-}
-
-pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
-    assert_eq!(response.headers().get("Location").unwrap(), location);
 }
