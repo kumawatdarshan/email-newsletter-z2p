@@ -1,6 +1,6 @@
 use crate::AppState;
+use crate::auth_extractors::{Authenticated, Browser};
 use crate::templates::JinjaEnv;
-use crate::utils::auth_extractors::RequireAuth;
 use axum::debug_handler;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -13,10 +13,10 @@ use repository::Repository;
 pub async fn password_change_form(
     _: State<Repository>,
     flash: Messages,
-    RequireAuth(user): RequireAuth,
+    user: Authenticated<Browser>,
     State(jinja): State<JinjaEnv>,
 ) -> impl IntoResponse {
-    let username = user.username;
+    let username = &user.username;
 
     let messages: Vec<_> = flash.into_iter().map(|x| x.message).collect();
     let template = jinja.get_template("change_password").unwrap();

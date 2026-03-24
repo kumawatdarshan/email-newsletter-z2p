@@ -8,7 +8,8 @@ use repository::Repository;
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 
-use crate::{AuthenticatedUser, routes_path::ADMIN_PASSWORD};
+use crate::auth_extractors::{Api, Authenticated};
+use crate::routes_path::ADMIN_PASSWORD;
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -20,7 +21,7 @@ pub struct FormData {
 /// This returns 401 instead of 303 because this is a post request.
 /// It is not a `frontend` facing route
 pub async fn change_password(
-    _: AuthenticatedUser,
+    _: Authenticated<Api>,
     flash: Messages,
     State(_repo): State<Repository>,
     Form(form): Form<FormData>,

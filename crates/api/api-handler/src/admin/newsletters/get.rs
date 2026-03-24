@@ -1,5 +1,5 @@
 use crate::templates::JinjaEnv;
-use crate::utils::auth_extractors::RequireAuth;
+use crate::utils::auth_extractors::{Authenticated, Browser};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
@@ -8,10 +8,10 @@ use minijinja::context;
 
 pub async fn newsletter_issue_form(
     flash: Messages,
-    RequireAuth(user): RequireAuth,
+    user: Authenticated<Browser>,
     State(jinja): State<JinjaEnv>,
 ) -> Result<Response, Response> {
-    let username = user.username;
+    let username = &user.username;
 
     let messages: Vec<_> = flash.into_iter().map(|x| x.message).collect();
     let template = jinja.get_template("admin_newsletters").unwrap();

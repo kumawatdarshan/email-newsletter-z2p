@@ -1,4 +1,4 @@
-use crate::AuthenticatedUser;
+use crate::auth_extractors::{Api, Authenticated};
 use anyhow::{Context, anyhow};
 use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
 use domain::{ConfirmedSubscriber, SubscriberEmail};
@@ -27,7 +27,7 @@ pub enum PublishError {
     fields(username = tracing::field::Empty, user_id = tracing::field::Empty)
 )]
 pub(crate) async fn publish_newsletter(
-    _: AuthenticatedUser,
+    _: Authenticated<Api>,
     State(repo): State<Repository>,
     State(email_client): State<EmailClient>,
     Form(form): Form<FormData>,

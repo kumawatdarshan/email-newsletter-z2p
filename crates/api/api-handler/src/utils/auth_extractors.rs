@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::routes_path::LOGIN;
 use crate::session_state::TypedSession;
 use anyhow::anyhow;
@@ -9,6 +11,40 @@ use axum::{
 use newsletter_macros::IntoErrorResponse;
 use repository::Repository;
 use secrecy::SecretString;
+
+#[derive(Debug, Clone)]
+pub(crate) struct Credentials {
+    pub(crate) username: String,
+    pub(crate) password: SecretString,
+}
+
+#[derive(Clone, Debug)]
+pub struct User {
+    pub username: String,
+    pub user_id: String,
+}
+
+/// Extractor returns `401` with `WWW-Authenticate` on failure.
+/// Suited for API endpoints (POST / PUT / DELETE).
+pub struct Api;
+
+/// Extractor redirects to the login page on failure.
+/// Suited for browser-facing GET endpoints.
+pub struct Browser;
+
+/// Authenticated user extractor, parameterised by rejection behaviour.
+///
+/// ```
+/// // API handler – returns 401 JSON on failure
+/// async fn publish(auth: Authenticated<Api>) { ... }
+///
+/// // Browser handler – redirects to /login on failure
+/// async fn dashboard(auth: Authenticated<Browser>) { ... }
+/// ```
+pub struct Authenticated<T: AuthRejection> {
+    pub identity: User,
+    _mode: PhantomData<T>,
+}
 
 #[derive(thiserror::Error, Debug, IntoErrorResponse)]
 pub enum AuthError {
@@ -22,52 +58,43 @@ pub enum AuthError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Credentials {
-    pub(crate) username: String,
-    pub(crate) password: SecretString,
+pub trait AuthRejection: Send + Sync + 'static {
+    fn reject(err: AuthError) -> Response;
 }
 
-/// JSON error, typical usage being POST/DELETE/PUT requests
-/// Common exception being server event to client such as `Session Expired, re-login`
-/// You must have repo as extractor to use this
-#[derive(Clone, Debug)]
-pub struct AuthenticatedUser {
-    pub username: String,
-    pub user_id: String,
-}
-
-impl<S> axum::extract::FromRequestParts<S> for AuthenticatedUser
-where
-    S: Send + Sync,
-    Repository: axum::extract::FromRef<S>,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        let session = TypedSession::from_request_parts(parts, state)
-            .await
-            .map_err(|e| AuthError::UnexpectedError(anyhow!("Session error: {:?}", e)))?;
-
-        if let Ok(user) = try_session(&session).await {
-            return Ok(user);
-        }
-
-        Err(AuthError::InvalidCredentials(anyhow!(
-            "No valid credentials provided"
-        )))
+impl AuthRejection for Api {
+    fn reject(err: AuthError) -> Response {
+        err.into_response()
     }
 }
 
-/// Redirects on 401, typical usage being protected GET endpoints
-pub struct RequireAuth(pub AuthenticatedUser);
+impl AuthRejection for Browser {
+    fn reject(_err: AuthError) -> Response {
+        Redirect::to(LOGIN).into_response()
+    }
+}
 
-impl<S> FromRequestParts<S> for RequireAuth
+impl<T: AuthRejection> Authenticated<T> {
+    fn new(identity: User) -> Self {
+        Self {
+            identity,
+            _mode: PhantomData,
+        }
+    }
+}
+
+// Deref so callers can write `auth.username` instead of `auth.identity.username`.
+impl<M: AuthRejection> std::ops::Deref for Authenticated<M> {
+    type Target = User;
+    fn deref(&self) -> &Self::Target {
+        &self.identity
+    }
+}
+
+impl<S, M> FromRequestParts<S> for Authenticated<M>
 where
     S: Send + Sync,
+    M: AuthRejection,
     Repository: FromRef<S>,
 {
     type Rejection = Response;
@@ -76,15 +103,24 @@ where
         parts: &mut axum::http::request::Parts,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        match AuthenticatedUser::from_request_parts(parts, state).await {
-            Ok(user) => Ok(RequireAuth(user)),
-            Err(_) => Err(Redirect::to(LOGIN).into_response()),
-        }
+        let session = TypedSession::from_request_parts(parts, state)
+            .await
+            .map_err(|e| {
+                M::reject(AuthError::UnexpectedError(anyhow!(
+                    "Session error: {:?}",
+                    e
+                )))
+            })?;
+
+        try_session(&session)
+            .await
+            .map(Authenticated::new)
+            .map_err(|e| M::reject(e))
     }
 }
 
 /// Try to authenticate via session cookie.
-async fn try_session(session: &TypedSession) -> Result<AuthenticatedUser, AuthError> {
+async fn try_session(session: &TypedSession) -> Result<User, AuthError> {
     let user_id = session
         .get_user_id()
         .await
@@ -97,5 +133,5 @@ async fn try_session(session: &TypedSession) -> Result<AuthenticatedUser, AuthEr
         .map_err(|e| AuthError::UnexpectedError(e.into()))?
         .ok_or_else(|| AuthError::InvalidCredentials(anyhow!("No username in session")))?;
 
-    Ok(AuthenticatedUser { user_id, username })
+    Ok(User { user_id, username })
 }
