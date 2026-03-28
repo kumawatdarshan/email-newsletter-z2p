@@ -1,6 +1,7 @@
 mod admin;
 mod health;
 mod home;
+mod idempotency;
 mod login;
 mod middlewares;
 mod routes;
