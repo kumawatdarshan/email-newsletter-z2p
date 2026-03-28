@@ -34,12 +34,15 @@ pub struct Browser;
 
 /// Authenticated user extractor, parameterised by rejection behaviour.
 ///
+/// # Examples
+///
 /// ```
 /// // API handler – returns 401 JSON on failure
-/// async fn publish(auth: Authenticated<Api>) { ... }
+/// use api_handler::auth_extractors::{Authenticated, Api, Browser};
+/// async fn publish(auth: Authenticated<Api>) { /*...*/ }
 ///
 /// // Browser handler – redirects to /login on failure
-/// async fn dashboard(auth: Authenticated<Browser>) { ... }
+/// async fn dashboard(auth: Authenticated<Browser>) { /*...*/ }
 /// ```
 pub struct Authenticated<T: AuthRejection> {
     pub identity: User,

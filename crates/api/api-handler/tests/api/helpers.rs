@@ -158,6 +158,7 @@ impl FakeData for TestApp {
            "title": "Newsletter Title",
            "text": "Plain-text Body",
            "html": "<p>HTML body</p>",
+           "idempotency_key": Uuid::new_v4().to_string()
         })
     }
 

@@ -62,7 +62,7 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() -> anyhow::Re
         .form(&app.fake_newsletter())
         .send()
         .await?
-        .assert_status(StatusCode::OK);
+        .assert_redirect_to(ADMIN_NEWSLETTERS);
 
     Ok(())
 }
@@ -84,7 +84,7 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() -> anyhow::Result<(
         .form(&app.fake_newsletter())
         .send()
         .await?
-        .assert_status(StatusCode::OK);
+        .assert_redirect_to(ADMIN_NEWSLETTERS);
 
     Ok(())
 }
@@ -208,5 +208,49 @@ async fn get_responds_with_issue_form() -> anyhow::Result<()> {
         .await?;
 
     assert!(html.contains(&format!(r#"<h1>Hello {}</h1>"#, &app.test_user.username)));
+    Ok(())
+}
+
+#[tokio::test]
+async fn newsletter_creation_is_idempotent() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
+    create_confirmed_subscriber(&app).await?;
+
+    let app = app.login(&app.test_user).await?;
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    let newsletter_body = serde_json::json!({
+       "title": "Newsletter Title",
+       "text": "Plain-text Body",
+       "html": "<p>HTML body</p>",
+       "idempotency_key": Uuid::new_v4().to_string()
+    });
+
+    app.post(ADMIN_NEWSLETTERS)
+        .form(&newsletter_body)
+        .send()
+        .await?
+        .assert_redirect_to(ADMIN_NEWSLETTERS);
+
+    let html = app.get(ADMIN_NEWSLETTERS).send().await?.text().await?;
+    assert!(html.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
+    // resend the newsletter
+
+    app.post(ADMIN_NEWSLETTERS)
+        .form(&newsletter_body)
+        .send()
+        .await?
+        .assert_redirect_to(ADMIN_NEWSLETTERS);
+
+    let html = app.get(ADMIN_NEWSLETTERS).send().await?.text().await?;
+    assert!(html.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
     Ok(())
 }

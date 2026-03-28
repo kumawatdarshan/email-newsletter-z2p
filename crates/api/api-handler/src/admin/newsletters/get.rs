@@ -17,5 +17,7 @@ pub async fn newsletter_issue_form(
     let template = jinja.get_template("admin_newsletters").unwrap();
     let html = template.render(context! { messages, username }).unwrap();
 
+    println!("{}", html);
+
     Ok((StatusCode::OK, Html(html)).into_response())
 }
