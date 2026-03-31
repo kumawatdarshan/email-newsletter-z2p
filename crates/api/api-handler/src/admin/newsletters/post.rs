@@ -1,6 +1,6 @@
 use crate::{
     auth_extractors::{Api, Authenticated},
-    idempotency::{IdempotencyKey, get_saved_response, save_response},
+    idempotency::{IdempotencyKey, NextAction, save_response, try_processing},
     routes_path::ADMIN_NEWSLETTERS,
 };
 use anyhow::{Context, anyhow};
@@ -52,10 +52,12 @@ pub(crate) async fn publish_newsletter(
         .try_into()
         .map_err(|_| PublishError::BadRequest)?;
 
-    if let Some(saved_response) = get_saved_response(&repo, &idempotency_key, &user.user_id).await?
-    {
-        success_flash(flash);
-        return Ok(saved_response);
+    match try_processing(&repo, &idempotency_key, &user.user_id).await? {
+        NextAction::StartProcessing => {}
+        NextAction::ReturnSavedResponse(saved_response) => {
+            success_flash(flash);
+            return Ok(saved_response);
+        }
     }
 
     let subscribers = get_confirmed_subscribers(&repo).await?;

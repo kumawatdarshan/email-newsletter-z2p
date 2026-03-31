@@ -7,6 +7,7 @@ pub struct HeaderPair {
     pub value: Vec<u8>,
 }
 
+#[derive(Debug)]
 pub struct SavedResponse {
     pub status_code: i64,
     pub response_body: Vec<u8>,
@@ -28,6 +29,12 @@ pub trait IdempotencyRepository {
         headers: Vec<HeaderPair>,
         body: &[u8],
     ) -> impl std::future::Future<Output = Result<()>> + Send;
+
+    fn n_inserted_rows(
+        &self,
+        user_id: &str,
+        idempotency_key: &str,
+    ) -> impl std::future::Future<Output = Result<u64>> + Send;
 }
 
 impl IdempotencyRepository for Repository {
@@ -39,7 +46,11 @@ impl IdempotencyRepository for Repository {
     ) -> Result<Option<SavedResponse>> {
         let Some(row) = sqlx::query!(
             r#"
-                SELECT response_status_code, response_body, response_headers
+                -- ! syntax is the not null assertion
+                SELECT
+                    response_status_code as "response_status_code!", 
+                    response_body as "response_body!",
+                    response_headers as "response_headers!"
                 FROM idempotency
                 WHERE user_id = $1 AND idempotency_key = $2
             "#,
@@ -55,7 +66,7 @@ impl IdempotencyRepository for Repository {
         Ok(Some(SavedResponse {
             status_code: row.response_status_code,
             response_body: row.response_body,
-            response_headers: serde_json::from_str(&row.response_headers)?,
+            response_headers: serde_json::from_str(&row.response_headers).unwrap_or_default(),
         }))
     }
 
@@ -69,19 +80,19 @@ impl IdempotencyRepository for Repository {
         body: &[u8],
     ) -> Result<()> {
         let headers_json = serde_json::to_string(&headers)?;
+        tracing::error!("save_headers => {:#?}", headers_json);
 
         sqlx::query!(
             r#"
-        INSERT INTO idempotency (
-            user_id,
-            idempotency_key,
-            response_status_code,
-            response_body,
-            response_headers,
-            created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, datetime('now'))
-        "#,
+                UPDATE idempotency 
+                SET
+                    response_status_code = $3,
+                    response_body = $4,
+                    response_headers = $5
+                 WHERE
+                    user_id = $1 AND
+                    idempotency_key = $2
+            "#,
             user_id,
             idempotency_key,
             status_code,
@@ -92,5 +103,27 @@ impl IdempotencyRepository for Repository {
         .await?;
 
         Ok(())
+    }
+
+    async fn n_inserted_rows(&self, user_id: &str, idempotency_key: &str) -> Result<u64> {
+        let res = sqlx::query!(
+            r#"
+                INSERT INTO idempotency (
+                    user_id,
+                    idempotency_key,
+                    created_at 
+                )
+                VALUES ($1, $2, datetime('now'))
+                ON CONFLICT
+                DO NOTHING
+            "#,
+            user_id,
+            idempotency_key
+        )
+        .execute(&self.0)
+        .await?
+        .rows_affected();
+
+        Ok(res)
     }
 }

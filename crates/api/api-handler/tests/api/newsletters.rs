@@ -5,8 +5,24 @@ use crate::helpers::{
 use api_handler::routes_path::{ADMIN_NEWSLETTERS, SUBSCRIPTIONS};
 use axum::http::StatusCode;
 use sqlx::types::Uuid;
+use std::time::Duration;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
+
+pub async fn post_newsletter(
+    app: &TestApp,
+    body: &serde_json::Value,
+) -> anyhow::Result<reqwest::Response> {
+    let response = app.post(ADMIN_NEWSLETTERS).form(body).send().await?;
+
+    Ok(response)
+}
+
+pub async fn get_newsletter_html(app: &TestApp) -> anyhow::Result<String> {
+    let text = app.get(ADMIN_NEWSLETTERS).send().await?.text().await?;
+
+    Ok(text)
+}
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> anyhow::Result<ConfirmationLinks> {
     let _mock_guard = Mock::given(path("/email"))
@@ -51,16 +67,13 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() -> anyhow::Re
 
     Mock::given(any())
         .respond_with(ResponseTemplate::new(StatusCode::OK))
-        // assertion that no request is made
         .expect(0)
         .mount(&app.email_server)
         .await;
 
-    app.login(&app.test_user)
-        .await?
-        .post(ADMIN_NEWSLETTERS)
-        .form(&app.fake_newsletter())
-        .send()
+    let app = app.login(&app.test_user).await?;
+
+    post_newsletter(app, &app.fake_newsletter())
         .await?
         .assert_redirect_to(ADMIN_NEWSLETTERS);
 
@@ -78,11 +91,9 @@ async fn newsletter_are_delivered_to_confirmed_subscribers() -> anyhow::Result<(
         .mount(&app.email_server)
         .await;
 
-    app.login(&app.test_user)
-        .await?
-        .post(ADMIN_NEWSLETTERS)
-        .form(&app.fake_newsletter())
-        .send()
+    let app = app.login(&app.test_user).await?;
+
+    post_newsletter(app, &app.fake_newsletter())
         .await?
         .assert_redirect_to(ADMIN_NEWSLETTERS);
 
@@ -197,15 +208,9 @@ async fn invalid_password_is_rejected() -> anyhow::Result<()> {
 #[tokio::test]
 async fn get_responds_with_issue_form() -> anyhow::Result<()> {
     let app = spawn_app_testing().await?;
+    let app = app.login(&app.test_user).await?;
 
-    let html = app
-        .login(&app.test_user)
-        .await?
-        .get(ADMIN_NEWSLETTERS)
-        .send()
-        .await?
-        .text()
-        .await?;
+    let html = get_newsletter_html(app).await?;
 
     assert!(html.contains(&format!(r#"<h1>Hello {}</h1>"#, &app.test_user.username)));
     Ok(())
@@ -232,25 +237,53 @@ async fn newsletter_creation_is_idempotent() -> anyhow::Result<()> {
        "idempotency_key": Uuid::new_v4().to_string()
     });
 
-    app.post(ADMIN_NEWSLETTERS)
-        .form(&newsletter_body)
-        .send()
+    // First attempt
+    post_newsletter(app, &newsletter_body)
         .await?
         .assert_redirect_to(ADMIN_NEWSLETTERS);
 
-    let html = app.get(ADMIN_NEWSLETTERS).send().await?.text().await?;
+    let html = get_newsletter_html(app).await?;
     assert!(html.contains("<p><i>The newsletter issue has been published!</i></p>"));
 
-    // resend the newsletter
-
-    app.post(ADMIN_NEWSLETTERS)
-        .form(&newsletter_body)
-        .send()
+    // Second attempt (Idempotency check)
+    post_newsletter(app, &newsletter_body)
         .await?
         .assert_redirect_to(ADMIN_NEWSLETTERS);
 
-    let html = app.get(ADMIN_NEWSLETTERS).send().await?.text().await?;
+    let html = get_newsletter_html(app).await?;
     assert!(html.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
+    Ok(())
+}
+
+/// ON: How to implement cross-request synchronization.
+/// In-memory locks (e.g. tokio::sync::Mutex) would work if
+/// all incoming requests were being served by a single API instance.
+/// This is not our case: our API is replicated,
+/// therefore the two requests might end up being processed by two different instances.
+#[tokio::test]
+async fn concurrent_form_submission_is_handled_gracefully() -> anyhow::Result<()> {
+    let app = spawn_app_testing().await?;
+    create_confirmed_subscriber(&app).await?;
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        // 2 sec was causing timeout in my case, IDK if i ever set it up or if its defaults lol.
+        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_millis(100)))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+    let app = app.login(&app.test_user).await?;
+
+    // intentionally share idempotency key to both
+    let newsletter = app.fake_newsletter();
+    let (response1, response2) = tokio::try_join!(
+        post_newsletter(app, &newsletter),
+        post_newsletter(app, &newsletter)
+    )?;
+
+    assert_eq!(response1.status(), response2.status());
+    assert_eq!(response1.text().await?, response2.text().await?);
 
     Ok(())
 }
