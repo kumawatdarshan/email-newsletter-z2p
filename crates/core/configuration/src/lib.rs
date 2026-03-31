@@ -1,11 +1,11 @@
 use config::{Config, ConfigError, File};
-use domain::SubscriberEmail;
 use secrecy::SecretString;
 use serde::Deserialize;
 use sqlx::ConnectOptions;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
 use std::path::PathBuf;
 use std::str::FromStr;
+use types::SubscriberEmail;
 
 pub type Port = u16;
 

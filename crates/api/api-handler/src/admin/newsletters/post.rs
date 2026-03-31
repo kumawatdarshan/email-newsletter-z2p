@@ -1,17 +1,17 @@
 use crate::{
     auth_extractors::{Api, Authenticated},
-    idempotency::{IdempotencyKey, NextAction, save_response, try_processing},
+    idempotency::{NextAction, save_response, try_processing},
     routes_path::ADMIN_NEWSLETTERS,
 };
 use anyhow::{Context, anyhow};
 use axum::response::IntoResponse;
 use axum::{Form, extract::State, http::StatusCode, response::Redirect};
 use axum_messages::Messages;
-use domain::{ConfirmedSubscriber, SubscriberEmail};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use repository::{Repository, newsletters::NewsletterRepository};
 use serde::Deserialize;
+use types::{ConfirmedSubscriber, IdempotencyKey, SubscriberEmail};
 
 #[derive(Deserialize)]
 pub struct FormData {

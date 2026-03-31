@@ -9,7 +9,7 @@ serde.workspace = true
 reqwest.workspace = true
 configuration.workspace = true
 
-domain.workspace = true
+types.workspace = true
 hakari-hack.workspace = true
 serde_urlencoded.workspace = true
 

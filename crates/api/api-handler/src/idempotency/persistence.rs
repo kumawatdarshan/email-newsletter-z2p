@@ -1,4 +1,3 @@
-use super::IdempotencyKey;
 use anyhow::Context;
 use axum::body::Body;
 use axum::body::to_bytes;
@@ -7,6 +6,7 @@ use repository::{
     Repository,
     idempotency::{HeaderPair, IdempotencyRepository},
 };
+use types::IdempotencyKey;
 
 pub async fn get_saved_response(
     repo: &Repository,
@@ -74,7 +74,9 @@ pub async fn try_processing(
     idempotency_key: &IdempotencyKey,
     user_id: &str,
 ) -> anyhow::Result<NextAction> {
-    let n_inserted_rows = repo.n_inserted_rows(user_id, idempotency_key).await?;
+    let txn = repo.as_ref().begin().await?;
+
+    let n_inserted_rows = repo.num_of_inserted_rows(user_id, idempotency_key).await?;
 
     if n_inserted_rows > 0 {
         Ok(NextAction::StartProcessing)

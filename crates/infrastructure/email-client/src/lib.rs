@@ -1,7 +1,7 @@
-use domain::SubscriberEmail;
 use reqwest::{Client, Url};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Serialize;
+use types::SubscriberEmail;
 
 #[derive(Debug, Clone)]
 pub struct EmailClient {
@@ -80,7 +80,7 @@ mod tests {
     use std::collections::HashMap;
 
     use claims::{assert_err, assert_ok};
-    use domain::SubscriberEmail;
+    use types::SubscriberEmail;
     use fake::{
         Fake, Faker,
         faker::{

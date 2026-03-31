@@ -1,11 +1,11 @@
 use anyhow::Context;
 use axum::{Form, extract::State, http::StatusCode};
-use domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use email_client::EmailClient;
 use newsletter_macros::{DebugChain, IntoErrorResponse};
 use rand::{Rng, distr::Alphanumeric};
 use repository::{Repository, subscriptions::SubscriptionsRepository};
 use serde::Deserialize;
+use types::{NewSubscriber, SubscriberEmail, SubscriberName};
 
 #[derive(Deserialize)]
 pub(crate) struct FormData {

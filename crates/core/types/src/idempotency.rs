@@ -3,7 +3,7 @@ use std::ops::Deref;
 use anyhow::bail;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct IdempotencyKey(String);
 
 impl TryFrom<String> for IdempotencyKey {

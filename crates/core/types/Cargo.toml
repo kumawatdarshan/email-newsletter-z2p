@@ -1,10 +1,12 @@
 [package]
-name = "domain"
+name = "types"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 validator.workspace = true
+anyhow.workspace = true
+serde.workspace = true
 unicode-segmentation.workspace = true
 hakari-hack.workspace = true
 

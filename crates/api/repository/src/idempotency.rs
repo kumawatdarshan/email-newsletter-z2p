@@ -1,5 +1,6 @@
 use crate::Repository;
 use crate::Result;
+use types::IdempotencyKey;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct HeaderPair {
@@ -18,19 +19,19 @@ pub trait IdempotencyRepository {
     fn get_saved_response(
         &self,
         user_id: &str,
-        idempotency_key: &str,
+        idempotency_key: &IdempotencyKey,
     ) -> impl std::future::Future<Output = Result<Option<SavedResponse>>> + Send;
 
     fn save_response(
         &self,
         user_id: &str,
-        idempotency_key: &str,
+        idempotency_key: &IdempotencyKey,
         status_code: u16,
         headers: Vec<HeaderPair>,
         body: &[u8],
     ) -> impl std::future::Future<Output = Result<()>> + Send;
 
-    fn n_inserted_rows(
+    fn num_of_inserted_rows(
         &self,
         user_id: &str,
         idempotency_key: &str,
@@ -42,8 +43,9 @@ impl IdempotencyRepository for Repository {
     async fn get_saved_response(
         &self,
         user_id: &str,
-        idempotency_key: &str,
+        idempotency_key: &IdempotencyKey,
     ) -> Result<Option<SavedResponse>> {
+        let idempotency_key = idempotency_key.as_ref();
         let Some(row) = sqlx::query!(
             r#"
                 -- ! syntax is the not null assertion
@@ -74,13 +76,13 @@ impl IdempotencyRepository for Repository {
     async fn save_response(
         &self,
         user_id: &str,
-        idempotency_key: &str,
+        idempotency_key: &IdempotencyKey,
         status_code: u16,
         headers: Vec<HeaderPair>,
         body: &[u8],
     ) -> Result<()> {
         let headers_json = serde_json::to_string(&headers)?;
-        tracing::error!("save_headers => {:#?}", headers_json);
+        let idempotency_key = idempotency_key.as_ref();
 
         sqlx::query!(
             r#"
@@ -105,7 +107,7 @@ impl IdempotencyRepository for Repository {
         Ok(())
     }
 
-    async fn n_inserted_rows(&self, user_id: &str, idempotency_key: &str) -> Result<u64> {
+    async fn num_of_inserted_rows(&self, user_id: &str, idempotency_key: &str) -> Result<u64> {
         let res = sqlx::query!(
             r#"
                 INSERT INTO idempotency (

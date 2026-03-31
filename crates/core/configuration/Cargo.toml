@@ -12,5 +12,5 @@ url.workspace = true
 dotenvy.workspace = true
 tracing-log.workspace = true
 
-domain.workspace = true
+types.workspace = true
 hakari-hack.workspace = true

@@ -56,7 +56,6 @@ dependencies = [
  "axum-messages",
  "base64",
  "configuration",
- "domain",
  "email-client",
  "hakari-hack",
  "linkify",
@@ -79,6 +78,7 @@ dependencies = [
  "tower-sessions",
  "tower-sessions-redis-store",
  "tracing",
+ "types",
  "url",
  "uuid",
  "wiremock",
@@ -446,13 +446,13 @@ name = "configuration"
 version = "0.1.0"
 dependencies = [
  "config",
- "domain",
  "dotenvy",
  "hakari-hack",
  "secrecy",
  "serde",
  "sqlx",
  "tracing-log 0.2.0",
+ "types",
  "url",
 ]
 
@@ -766,19 +766,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "domain"
-version = "0.1.0"
-dependencies = [
- "claims",
- "fake",
- "hakari-hack",
- "quickcheck",
- "quickcheck_macros",
- "unicode-segmentation",
- "validator",
-]
-
-[[package]]
 name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -805,7 +792,6 @@ version = "0.1.0"
 dependencies = [
  "claims",
  "configuration",
- "domain",
  "fake",
  "hakari-hack",
  "reqwest",
@@ -814,6 +800,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
+ "types",
  "wiremock",
 ]
 
@@ -2295,13 +2282,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "argon2",
- "domain",
  "secrecy",
  "serde",
  "serde_json",
  "sqlx",
  "thiserror",
  "tracing",
+ "types",
 ]
 
 [[package]]
@@ -3458,6 +3445,21 @@ name = "typenum"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
+
+[[package]]
+name = "types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "claims",
+ "fake",
+ "hakari-hack",
+ "quickcheck",
+ "quickcheck_macros",
+ "serde",
+ "unicode-segmentation",
+ "validator",
+]
 
 [[package]]
 name = "ucd-trie"

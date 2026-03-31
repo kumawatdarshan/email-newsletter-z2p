@@ -1,9 +1,9 @@
 use crate::{Repository, Result};
-use domain::NewSubscriber;
 use sqlx::{
     Sqlite, Transaction,
     types::{Uuid, chrono::Utc},
 };
+use types::NewSubscriber;
 
 pub trait SubscriptionsRepository {
     fn insert_subscriber(
