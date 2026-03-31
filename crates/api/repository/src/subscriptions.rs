@@ -1,39 +1,31 @@
-use crate::{Repository, Result};
-use sqlx::{
-    Sqlite, Transaction,
-    types::{Uuid, chrono::Utc},
-};
+use crate::{Connection, Repo, Result};
+use sqlx::types::{Uuid, chrono::Utc};
 use types::NewSubscriber;
 
 pub trait SubscriptionsRepository {
     fn insert_subscriber(
         &self,
-        transaction: &mut Transaction<'_, Sqlite>,
         new_subscriber: &NewSubscriber,
     ) -> impl std::future::Future<Output = Result<String>> + Send;
     fn store_token(
         &self,
-        transaction: &mut Transaction<'_, Sqlite>,
         subscriber_id: &str,
         subscription_token: &str,
     ) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 
-impl SubscriptionsRepository for Repository {
+impl<C: Connection> SubscriptionsRepository for Repo<C> {
     #[tracing::instrument(
         name = "Saving new subscriber details in the database.",
-        skip(transaction, new_subscriber)
+        skip(self, new_subscriber)
     )]
-    async fn insert_subscriber(
-        &self,
-        transaction: &mut Transaction<'_, Sqlite>,
-        new_subscriber: &NewSubscriber,
-    ) -> Result<String> {
+    async fn insert_subscriber(&self, new_subscriber: &NewSubscriber) -> Result<String> {
         let subscriber_id = Uuid::new_v4().to_string();
         let email = new_subscriber.email.as_ref();
         let name = new_subscriber.name.as_ref();
         let timestamp = Utc::now().to_string();
 
+        let mut conn = self.0.acquire().await?;
         sqlx::query!(
             r#"
             INSERT INTO subscriptions (id, email,name, subscribed_at, status)
@@ -44,7 +36,7 @@ impl SubscriptionsRepository for Repository {
             name,
             timestamp
         )
-        .execute(&mut **transaction)
+        .execute(&mut *conn)
         .await?;
 
         Ok(subscriber_id)
@@ -52,14 +44,10 @@ impl SubscriptionsRepository for Repository {
 
     #[tracing::instrument(
         name = "Store subscription token in the database",
-        skip(transaction, subscription_token)
+        skip(self, subscription_token)
     )]
-    async fn store_token(
-        &self,
-        transaction: &mut Transaction<'_, Sqlite>,
-        subscriber_id: &str,
-        subscription_token: &str,
-    ) -> Result<()> {
+    async fn store_token(&self, subscriber_id: &str, subscription_token: &str) -> Result<()> {
+        let mut conn = self.0.acquire().await?;
         sqlx::query!(
             r#"
             INSERT INTO subscription_tokens (subscription_token, subscriber_id)
@@ -68,7 +56,7 @@ impl SubscriptionsRepository for Repository {
             subscription_token,
             subscriber_id,
         )
-        .execute(&mut **transaction)
+        .execute(&mut *conn)
         .await?;
 
         Ok(())

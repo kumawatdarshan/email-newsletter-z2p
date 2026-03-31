@@ -33,8 +33,21 @@
 > 3000/month instead of a 100/day.
 > Doesn't require a professional mail. (primary reason why I used this)
 1. Using `dotenvy` instead of risking API uploads to GitHub
+1. Using a Repository Pattern for database. 
 
 # Side Questing
+
+## 1. Repository Pattern
+
+I had done the migration a while back but writing it now. I was reading this article about Repository+Services bla bla, Services seemed a major overkill to me but I could see the value in Repository.
+For one, I had already performed a major migration from pgsql to sqlite. So I knew that abstracting db layer def is worth while. It also doesnt force the operator(me) to force migration at once(which I had to) and could be adapted iteratively.
+
+Now ofcourse, most situation would require full migration and partial iterative migration could even introduce bugs but hypothetical situation like changing queue backend from pgsql to redis streams could see major benefit.
+
+I found it annoying tho, like really annoying. Mostly due to how I set it up, requires me to define trait, then implement it.
+which is still okay, whats annoying was the lack of `Send` for async traits. that really tripped me up in the beginning. Have to write a verbose signature using the `impl future` syntax.
+
+The trait approach did end up helping me, when I included an API for transactions, I still do not understand majority of the code in @txn.rs file as my understanding of lifetimes and Pin is rudimentary. It started off simpler but I ran into "not general enough implementation" lifetime problems. I couldn't figure that out. Asked around and created the `OwnedTxn` struct. and that solved things up. Maybe I am still a beginner.
 
 ## 1. The REST-full naming
 

@@ -1,3 +1,3 @@
 mod persistence;
 
-pub use persistence::{NextAction, get_saved_response, save_response, try_processing};
+pub use persistence::{NextAction, save_response, try_processing};

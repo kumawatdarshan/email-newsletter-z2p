@@ -63,25 +63,23 @@ pub(crate) async fn subscribe_to_newsletter(
     }
     let new_subscriber = form.try_into().map_err(SubscribeError::ValidationError)?;
 
-    let mut transaction = repo
-        .as_ref()
+    let txn = repo
         .begin()
         .await
         .context("Failed to begin database transaction")?;
 
-    let subscriber_id = repo
-        .insert_subscriber(&mut transaction, &new_subscriber)
+    let subscriber_id = txn
+        .insert_subscriber(&new_subscriber)
         .await
         .context("Failed to insert new subscriber in the database")?;
 
     let subscription_token = generate_subscription_token();
 
-    repo.store_token(&mut transaction, &subscriber_id, &subscription_token)
+    txn.store_token(&subscriber_id, &subscription_token)
         .await
         .context("Failed to store the confirmation token for the new subscriber")?;
 
-    transaction
-        .commit()
+    txn.commit()
         .await
         .context("Failed to commit SQL transaction to store a new subscriber")?;
 

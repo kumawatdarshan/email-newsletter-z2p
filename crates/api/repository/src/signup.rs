@@ -5,7 +5,7 @@ use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use sqlx::types::Uuid;
 
-use crate::Repository;
+use crate::{Connection, Repo};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SignUpError {
@@ -24,7 +24,7 @@ pub trait SignUpRepository {
     ) -> impl std::future::Future<Output = Result<String, SignUpError>> + Send;
 }
 
-impl SignUpRepository for Repository {
+impl<C: Connection> SignUpRepository for Repo<C> {
     #[tracing::instrument(name = "Add new admin user.", skip(self, password))]
     async fn add_new_user(
         &self,
@@ -41,6 +41,15 @@ impl SignUpRepository for Repository {
             .unwrap()
             .to_string();
 
+        let mut conn = self
+            .0
+            .acquire()
+            .await
+            .map_err(|e| match e {
+                crate::RepoError::Sqlx(e) => SignUpError::DatabaseError(e),
+                _ => unreachable!("acquire only returns Sqlx errors"),
+            })?;
+
         match sqlx::query!(
             r#"
             INSERT INTO users (user_id, username, password_hash)
@@ -50,7 +59,7 @@ impl SignUpRepository for Repository {
             username,
             pw_hash,
         )
-        .execute(&self.0)
+        .execute(&mut *conn)
         .await
         {
             Ok(_) => Ok(user_id),

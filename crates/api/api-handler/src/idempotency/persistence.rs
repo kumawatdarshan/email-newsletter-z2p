@@ -3,13 +3,14 @@ use axum::body::Body;
 use axum::body::to_bytes;
 use axum::{http::StatusCode, response::Response};
 use repository::{
-    Repository,
+    Repository, TransactionalRepository,
     idempotency::{HeaderPair, IdempotencyRepository},
 };
 use types::IdempotencyKey;
 
+#[tracing::instrument(name = "Fetching saved response(idempotency)", skip(repo))]
 pub async fn get_saved_response(
-    repo: &Repository,
+    repo: &impl IdempotencyRepository,
     idempotency_key: &IdempotencyKey,
     user_id: &str,
 ) -> anyhow::Result<Option<Response>> {
@@ -30,8 +31,9 @@ pub async fn get_saved_response(
     Ok(Some(response))
 }
 
+#[tracing::instrument(name = "Saving response(idempotency)", skip(txn, response))]
 pub async fn save_response(
-    repo: &Repository,
+    txn: TransactionalRepository,
     idempotency_key: &IdempotencyKey,
     user_id: &str,
     response: Response,
@@ -52,7 +54,7 @@ pub async fn save_response(
         h
     };
 
-    repo.save_response(
+    txn.save_response(
         user_id,
         idempotency_key,
         status_code.as_u16(),
@@ -61,11 +63,15 @@ pub async fn save_response(
     )
     .await?;
 
+    txn.commit()
+        .await
+        .context("Failed to commit idempotency transaction")?;
+
     Ok(Response::from_parts(parts, Body::from(bytes)))
 }
 
 pub enum NextAction {
-    StartProcessing,
+    StartProcessing(TransactionalRepository),
     ReturnSavedResponse(Response),
 }
 
@@ -74,14 +80,14 @@ pub async fn try_processing(
     idempotency_key: &IdempotencyKey,
     user_id: &str,
 ) -> anyhow::Result<NextAction> {
-    let txn = repo.as_ref().begin().await?;
+    let txn = repo.begin().await?;
 
-    let n_inserted_rows = repo.num_of_inserted_rows(user_id, idempotency_key).await?;
+    let n_inserted_rows = txn.num_of_inserted_rows(user_id, idempotency_key).await?;
 
     if n_inserted_rows > 0 {
-        Ok(NextAction::StartProcessing)
+        Ok(NextAction::StartProcessing(txn))
     } else {
-        let saved_response = get_saved_response(repo, idempotency_key, user_id)
+        let saved_response = get_saved_response(&txn, idempotency_key, user_id)
             .await?
             .with_context(|| "Expected a saved response, didn't find any")?;
 
