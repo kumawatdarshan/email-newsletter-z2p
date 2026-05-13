@@ -96,6 +96,7 @@ impl<'a> ApplicationBuilder<'a> {
             repo,
             email_client,
             base_url,
+            redis_pool: redis_pool.clone(),
         };
 
         let router = get_router(app_state, redis_pool)

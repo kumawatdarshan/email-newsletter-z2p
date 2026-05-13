@@ -35,6 +35,7 @@ pub struct AppState {
     pub repo: Repository,
     pub email_client: EmailClient,
     pub base_url: String,
+    pub redis_pool: tower_sessions_redis_store::fred::prelude::Pool,
 }
 
 // Only for debugging. Should be removed in production to declutter the logs.

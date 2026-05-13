@@ -64,6 +64,11 @@ impl Repository {
     pub async fn connect_with(options: sqlx::sqlite::SqliteConnectOptions) -> Result<Self> {
         Ok(Self(sqlx::SqlitePool::connect_with(options).await?))
     }
+
+    pub async fn ping(&self) -> Result<()> {
+        sqlx::query("SELECT 1").execute(self.as_ref()).await?;
+        Ok(())
+    }
 }
 
 impl Clone for Repository {
