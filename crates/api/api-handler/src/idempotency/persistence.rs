@@ -80,7 +80,7 @@ pub async fn try_processing(
     idempotency_key: &IdempotencyKey,
     user_id: &str,
 ) -> anyhow::Result<NextAction> {
-    let txn = repo.begin().await?;
+    let txn = repo.begin_immediate().await?;
 
     let n_inserted_rows = txn.num_of_inserted_rows(user_id, idempotency_key).await?;
 

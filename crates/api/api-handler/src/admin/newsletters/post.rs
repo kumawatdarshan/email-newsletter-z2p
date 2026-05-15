@@ -60,7 +60,7 @@ pub(crate) async fn publish_newsletter(
         }
     };
 
-    let subscribers = get_confirmed_subscribers(&repo).await?;
+    let subscribers = get_confirmed_subscribers(&txn).await?;
 
     for subscriber in subscribers {
         let Ok(subscriber) = subscriber else {
@@ -92,8 +92,8 @@ pub(crate) async fn publish_newsletter(
 }
 
 #[tracing::instrument(name = "Get Confirmed Subscribers", skip(repo))]
-async fn get_confirmed_subscribers(
-    repo: &Repository,
+async fn get_confirmed_subscribers<C: repository::Connection>(
+    repo: &repository::Repo<C>,
 ) -> anyhow::Result<Vec<anyhow::Result<ConfirmedSubscriber>>> {
     let rows = repo.get_confirmed_subscribers_raw().await?;
 

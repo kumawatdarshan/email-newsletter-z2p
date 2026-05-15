@@ -47,7 +47,13 @@ impl DerefMut for TxnGuard<'_> {
 pub type TransactionalRepository = Repo<TxnMutex>;
 
 impl Repository {
+    pub async fn begin_immediate(&self) -> Result<TransactionalRepository> {
+        let tx = self.0.begin_with("BEGIN IMMEDIATE").await?;
+        Ok(Repo(Mutex::new(OwnedTxn(tx))))
+    }
+
     /// Typestate switch
+    /// We are moving the transactions parts out of Repository to the caller site.
     pub async fn begin(&self) -> Result<TransactionalRepository> {
         let tx = self.0.begin().await?;
         Ok(Repo(Mutex::new(OwnedTxn(tx))))
@@ -55,6 +61,7 @@ impl Repository {
 }
 
 impl TransactionalRepository {
+    /// We are moving the transactions parts out of Repository to the caller site.
     pub async fn commit(self) -> Result<()> {
         self.0.into_inner().0.commit().await?;
         Ok(())
