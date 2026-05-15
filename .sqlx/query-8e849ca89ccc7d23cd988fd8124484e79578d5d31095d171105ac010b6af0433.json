@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                -- ! syntax is the not null assertion\n                SELECT\n                    response_status_code as \"response_status_code!\", \n                    response_body as \"response_body!\",\n                    response_headers as \"response_headers!\"\n                FROM idempotency\n                WHERE user_id = $1 AND idempotency_key = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "response_status_code!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "response_body!",
+        "ordinal": 1,
+        "type_info": "Blob"
+      },
+      {
+        "name": "response_headers!",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "8e849ca89ccc7d23cd988fd8124484e79578d5d31095d171105ac010b6af0433"
+}

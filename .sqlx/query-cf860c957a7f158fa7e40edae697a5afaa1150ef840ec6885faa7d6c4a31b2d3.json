@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO subscriptions (id, email,name, subscribed_at, status)\n            VALUES ($1,$2,$3,$4, 'pending_confirmation')\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "cf860c957a7f158fa7e40edae697a5afaa1150ef840ec6885faa7d6c4a31b2d3"
+}
