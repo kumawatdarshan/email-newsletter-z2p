@@ -1,5 +1,4 @@
-use crate::Repository;
-use crate::Result;
+use crate::{Connection, Repo, Result};
 use types::IdempotencyKey;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -38,7 +37,7 @@ pub trait IdempotencyRepository {
     ) -> impl std::future::Future<Output = Result<u64>> + Send;
 }
 
-impl IdempotencyRepository for Repository {
+impl<C: Connection> IdempotencyRepository for Repo<C> {
     #[tracing::instrument(name = "Get Saved Idempotency Response", skip(self))]
     async fn get_saved_response(
         &self,
@@ -46,6 +45,7 @@ impl IdempotencyRepository for Repository {
         idempotency_key: &IdempotencyKey,
     ) -> Result<Option<SavedResponse>> {
         let idempotency_key = idempotency_key.as_ref();
+        let mut conn = self.0.acquire().await?;
         let Some(row) = sqlx::query!(
             r#"
                 -- ! syntax is the not null assertion
@@ -59,7 +59,7 @@ impl IdempotencyRepository for Repository {
             user_id,
             idempotency_key
         )
-        .fetch_optional(&self.0)
+        .fetch_optional(&mut *conn)
         .await?
         else {
             return Ok(None);
@@ -84,6 +84,7 @@ impl IdempotencyRepository for Repository {
         let headers_json = serde_json::to_string(&headers)?;
         let idempotency_key = idempotency_key.as_ref();
 
+        let mut conn = self.0.acquire().await?;
         sqlx::query!(
             r#"
                 UPDATE idempotency 
@@ -101,13 +102,14 @@ impl IdempotencyRepository for Repository {
             body,
             headers_json
         )
-        .execute(&self.0)
+        .execute(&mut *conn)
         .await?;
 
         Ok(())
     }
 
     async fn num_of_inserted_rows(&self, user_id: &str, idempotency_key: &str) -> Result<u64> {
+        let mut conn = self.0.acquire().await?;
         let res = sqlx::query!(
             r#"
                 INSERT INTO idempotency (
@@ -122,7 +124,7 @@ impl IdempotencyRepository for Repository {
             user_id,
             idempotency_key
         )
-        .execute(&self.0)
+        .execute(&mut *conn)
         .await?
         .rows_affected();
 

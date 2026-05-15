@@ -269,7 +269,7 @@ async fn concurrent_form_submission_is_handled_gracefully() -> anyhow::Result<()
     Mock::given(path("/email"))
         .and(method("POST"))
         // 2 sec was causing timeout in my case, IDK if i ever set it up or if its defaults lol.
-        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_millis(100)))
+        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_millis(900)))
         .expect(1)
         .mount(&app.email_server)
         .await;

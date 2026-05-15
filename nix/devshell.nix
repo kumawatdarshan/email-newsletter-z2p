@@ -20,7 +20,7 @@ in {
       services
     ];
 
-    DATABASE_URL = "sqlite:./data.db";
+    DATABASE_URL = "sqlite:./data/data.db";
 
     shellHook = preCommitCheck.shellHook;
   };

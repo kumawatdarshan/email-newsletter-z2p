@@ -52,15 +52,15 @@ pub(crate) async fn publish_newsletter(
         .try_into()
         .map_err(|_| PublishError::BadRequest)?;
 
-    match try_processing(&repo, &idempotency_key, &user.user_id).await? {
-        NextAction::StartProcessing => {}
+    let txn = match try_processing(&repo, &idempotency_key, &user.user_id).await? {
+        NextAction::StartProcessing(txn) => txn,
         NextAction::ReturnSavedResponse(saved_response) => {
             success_flash(flash);
             return Ok(saved_response);
         }
-    }
+    };
 
-    let subscribers = get_confirmed_subscribers(&repo).await?;
+    let subscribers = get_confirmed_subscribers(&txn).await?;
 
     for subscriber in subscribers {
         let Ok(subscriber) = subscriber else {
@@ -80,7 +80,7 @@ pub(crate) async fn publish_newsletter(
 
     success_flash(flash);
     let response = save_response(
-        &repo,
+        txn,
         &idempotency_key,
         &user.user_id,
         // how to verify what error point returns what error? like this should resolve to 500 because it makes sql connection
@@ -92,8 +92,8 @@ pub(crate) async fn publish_newsletter(
 }
 
 #[tracing::instrument(name = "Get Confirmed Subscribers", skip(repo))]
-async fn get_confirmed_subscribers(
-    repo: &Repository,
+async fn get_confirmed_subscribers<C: repository::Connection>(
+    repo: &repository::Repo<C>,
 ) -> anyhow::Result<Vec<anyhow::Result<ConfirmedSubscriber>>> {
     let rows = repo.get_confirmed_subscribers_raw().await?;
 
