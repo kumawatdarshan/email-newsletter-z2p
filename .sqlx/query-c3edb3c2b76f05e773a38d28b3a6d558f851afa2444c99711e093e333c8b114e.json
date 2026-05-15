@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                INSERT INTO idempotency (\n                    user_id,\n                    idempotency_key,\n                    created_at \n                )\n                VALUES ($1, $2, datetime('now'))\n                ON CONFLICT\n                DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c3edb3c2b76f05e773a38d28b3a6d558f851afa2444c99711e093e333c8b114e"
+}
